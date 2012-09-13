@@ -1,0 +1,49 @@
+
+importClassesFrom(methods, ANY, character, list, logical, matrix,
+                  missing, "NULL", numeric, oldClass, vector)
+importMethodsFrom(methods, coerce, initialize, show)
+importFrom(methods, "@<-", as, callGeneric, is, isVirtualClass, new,
+           slot, "slot<-", slotNames, validObject)
+importFrom(stats, as.dist, dhyper, phyper, runif)
+importFrom(tools, package.dependencies)
+importFrom(utils, CRAN.packages, modifyList)
+
+exportClasses(catNetwork, catNetworkEvaluate, dagEvaluate, catNetworkDistance, CPDAG)
+
+useDynLib(sdnet)
+
+exportMethods(
+	cnNumNodes, cnNodes, 
+	cnSubNetwork, cnReorderNodes, 
+	cnEdges, cnMatEdges, 
+	cnParents, cnMatParents, 		
+	cnProb, cnPlotProb, cnSetProb, 
+	cnNodeMarginalProb, cnJointProb, cnCondProb, 
+	cnComplexity, cnOrder, 
+	cnPlot, cnDot,
+	cnSamples, 
+	cnLoglik, cnNodeLoglik, 
+	cnFind, cnFindAIC, cnFindBIC, cnFindKL, 
+	cnPredict, 
+	cnKLComplexity, 
+	cnCompare, 
+	cnParHist, 
+	cnCluster, cnClusterSep
+	)
+
+export(
+        sdnLearn, sdnPredict, sdnEvaluate, 
+	cnNew, cnRandomCatnet, 
+        cnCatnetFromSif, cnCatnetFromBif, cnCatnetFromXdsl, 
+	cnCatnetFromEdges, 
+	isDAG, dag2cpdag, 
+	cnNodeSampleLoglik, cnNodeSampleProb, 
+	cnDiscretize, 
+	cnSearchOrder, 
+	cnSearchHist,
+	cnEntropy, cnEntropyOrder, 
+	cnEdgeDistanceKL, cnEdgeDistancePearson, 
+	cnClusterMI, 
+	cnPearsonTest,
+	cnSetSeed)
+
