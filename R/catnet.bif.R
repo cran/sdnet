@@ -222,8 +222,8 @@ cnCatnetFromBif <- function(file) {
   cn@meta <- netname
 
   for(i in 1:nnodes) {
-    nodecats <- cn@categories[[i]]
-    nodepars <- cn@parents[[i]]
+    nodecats <- cn@cats[[i]]
+    nodepars <- cn@pars[[i]]
     if(length(nodepars)<1) {
       str <- lprobs[[i]][[1]]
       ns <- length(str)
@@ -242,7 +242,7 @@ cnCatnetFromBif <- function(file) {
         cprobs <- c(cprobs, as.numeric(snum))
         nns <- nns+1
       }
-      cn@probabilities[[i]] <- cprobs
+      cn@probs[[i]] <- cprobs
       next
     }
     ## nodeparents > 0
@@ -260,7 +260,7 @@ cnCatnetFromBif <- function(file) {
       parcats <- NULL
       for(np in 1:length(nodepars)) {
         cc <- strcat[np]
-        nc <- which(cn@categories[[nodepars[np]]] == cc)
+        nc <- which(cn@cats[[nodepars[np]]] == cc)
         if(length(nc) != 1)
           stop("wrong parent categories ", cc)
         parcats <- c(parcats, as.integer(nc))
@@ -277,7 +277,7 @@ cnCatnetFromBif <- function(file) {
       idtable <- idtable+1
       probtable[[idtable]] <- nodeprobs
     }
-    cn@probabilities[[i]] <- setNodeProbTable(i, nodepars, cn@categories, 1:length(nodepars), probtable, 1)
+    cn@probs[[i]] <- setNodeProbTable(i, nodepars, cn@cats, 1:length(nodepars), probtable, 1)
   }
 
   return(cn) 

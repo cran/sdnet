@@ -180,7 +180,7 @@ hardDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL,
   return(data)
 }
 
-softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL, cover=0.95, maxiter=16) {
+softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL, cover=0.95, maxiter=100, eps=1e-15) {
 
   if(!is.matrix(data) && !is.data.frame(data))
     stop("data should be a matrix or data frame")
@@ -220,7 +220,7 @@ softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL,
   
   if(marginal == "gauss" || marginal == "uniform" || marginal == "quantile") {
     plist <- .Call("ccnSoftQuant", 
-                          data,  numcats, learnset, cover, marginal, maxiter, 
+                          data,  numcats, learnset, cover, marginal, maxiter, eps, 
                           PACKAGE="sdnet")
     pdata <- plist[[1]]
     ddata <- plist[[2]]
@@ -243,11 +243,13 @@ softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL,
   return(NULL)
 }
 
-cnDiscretize <- function(data, numcats=3, mode="soft", marginal="quantile", learnset=NULL, cover=0.95, maxiter=16) {
+cnDiscretize <- function(data, numcats=3, mode="soft", marginal="quantile", learnset=NULL, cover=0.95, maxiter=100, eps=1e-8) {
+  if(marginal != "uniform" && marginal != "quantile" && marginal != "gauss")
+    stop("Unsupported marginal")
   if(mode == "hard")
     return(hardDiscretize(data, numcats, marginal = marginal, learnset=learnset, cover=cover, qlevels=NULL))
   if(mode == "soft")
-    return(softDiscretize(data, numcats, marginal = marginal, learnset=learnset, cover=cover, maxiter=maxiter))
-  stop("Unknown mode")
+    return(softDiscretize(data, numcats, marginal = marginal, learnset=learnset, cover=cover, maxiter=maxiter, eps))
+  stop("Unsupported mode")
 }
 

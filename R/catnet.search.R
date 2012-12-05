@@ -47,7 +47,8 @@ cnSearchOrder <- function(data, pert = NULL,
                           maxParentSet = 0, parentSizes = NULL, 
                           maxComplexity = 0, nodeOrder = NULL, nodeCats = NULL, 
                           parentsPool = NULL, fixedParents = NULL, edgeProb = NULL, 
-                          echo = FALSE, softmode=FALSE, dagsOnly = FALSE, classes = NULL) {
+                          echo = FALSE, softmode=FALSE, dagsOnly = FALSE, 
+                          classes = NULL, clsdist = "kl") {
 
   if(!is.matrix(data) && !is.data.frame(data))
     stop("data should be a matrix or data frame")
@@ -253,6 +254,8 @@ cnSearchOrder <- function(data, pert = NULL,
       stop("Wrong classes")
     if(length(classes) != numSamples)
       stop("length(classes) != sample size")
+    if(clsdist != "kl" && clsdist != "chisq")
+      stop("clsdist should be kl or chisq")
   }
 
   .Call("ccnReleaseCache", PACKAGE="sdnet")
@@ -267,6 +270,7 @@ cnSearchOrder <- function(data, pert = NULL,
                     echo, 
 		    dagsOnly, 
 		    classes, 
+                    clsdist, 
                     PACKAGE="sdnet")
 
   if(dagsOnly) {
@@ -275,7 +279,7 @@ cnSearchOrder <- function(data, pert = NULL,
     eval@cats <- cats
     t2 <- proc.time()
     eval@time <- as.numeric(t2[3] - t1[3])
-    eval@version <- as.character(packageVersion(pkg="catnet"))
+    eval@version <- as.character(packageVersion(pkg="sdnet"))
     return(eval)
   }
 

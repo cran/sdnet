@@ -16,7 +16,7 @@ setClass("catNetwork",
                         nodelik="ANY",
                         nodeSampleSizes="vector"), 
          validity = function(object) validCatNetwork(object),
-         package = "catnet"
+         package = "sdnet"
 	   )
 
 setGeneric("cnAddNode", 
@@ -235,7 +235,7 @@ setClass("catNetworkDistance",
                         markov.fp = "ANY",
                         markov.fn = "ANY",
                         KLdist = "ANY"),
-         package = "catnet"
+         package = "sdnet"
 	   )
 
 setClass("catNetworkEvaluate",  
@@ -263,7 +263,7 @@ setClass("catNetworkEvaluate",
                         KLdist = "vector",
                         time = "numeric"
 			),
-         package = "catnet"
+         package = "sdnet"
 	   )
 
 setGeneric("cnFind", 
@@ -302,7 +302,7 @@ setClass("dagEvaluate",
                         loglik="vector",
 			complx="vector",
 			time = "numeric"), 
-         package = "catnet"
+         package = "sdnet"
 	   )
 
 setGeneric("cnCatnetFromDagEvaluate", 
@@ -319,7 +319,7 @@ setClass("CPDAG",
                         nodes = "vector", 
                         edges = "list"
                         ),
-         package = "catnet"
+         package = "sdnet"
 	   )
 
 setGeneric("dag2cpdag", 

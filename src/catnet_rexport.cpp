@@ -299,7 +299,7 @@ SEXP showCatnet(SEXP cnet)
 SEXP searchOrder(SEXP rSamples, SEXP rPerturbations, 
 	SEXP rMaxParents, SEXP rParentSizes, SEXP rMaxComplexity, SEXP rOrder, SEXP rNodeCats, 
 	SEXP rParentsPool, SEXP rFixedParentsPool, SEXP rMatEdgeLiks, 
-	SEXP rUseCache, SEXP rEcho, SEXP rDagOrCatnet, SEXP rClasses) {
+	SEXP rUseCache, SEXP rEcho, SEXP rDagOrCatnet, SEXP rClasses, SEXP rClsdist) {
 
 	//if(!isMatrix(rSamples))
 	//	error("Data is not a matrix");

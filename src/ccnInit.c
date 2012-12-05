@@ -24,7 +24,7 @@ int g_setseed = -1;
 size_t g_memcounter = 0;
 
 static const R_CallMethodDef R_CallDef[] = {
-	{"ccnSearchOrder", (DL_FUNC)&searchOrder, 14},
+	{"ccnSearchOrder", (DL_FUNC)&searchOrder, 15},
 	{"ccnSearchSA", (DL_FUNC)&searchSA, 23},
 	{"ccnParHistogram", (DL_FUNC)&catnetParHistogram, 14},
 	{"ccnSetProb", (DL_FUNC)&catnetSetProb, 3},
@@ -39,7 +39,7 @@ static const R_CallMethodDef R_CallDef[] = {
 	{"ccnSamples", (DL_FUNC)&catnetSamples, 4},
 	{"ccnSetSeed", (DL_FUNC)&catnetSetSeed, 1},
 	{"ccnCatnetFromDagEvaluate", (DL_FUNC)&createCatnetFromDagEvaluate, 2},
-	{"ccnSoftQuant", (DL_FUNC)&catnetSoftQuant, 6},
+	{"ccnSoftQuant", (DL_FUNC)&catnetSoftQuant, 7},
 	{NULL, NULL, 0},
 };
 

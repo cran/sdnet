@@ -62,6 +62,10 @@ sdnLearn <- function(data, cls, clslevs = NULL, ncats = 3, nodeCats = NULL, std=
   if(is.null(nodeCats))
     nodeCats <- lapply(1:N, function(nn) c(1:ncats))
   names(nodeCats) <- geneset
+
+  n1 <- sum(cls==clslevs[1])
+  n2 <- sum(cls==clslevs[2])
+  dprior <- log(n1) - log(n2)
   
   if(std) {
     ## genes z-transformation
@@ -85,7 +89,7 @@ sdnLearn <- function(data, cls, clslevs = NULL, ncats = 3, nodeCats = NULL, std=
     return(sdnet::cnSetProb(bnet, dat, nodeCats=nodeCats, softmode=TRUE))
   })
 
-  res <- list(geneset=geneset, clslevs=clslevs, nets=nets, nodeCats=nodeCats, quant=quant)
+  res <- list(geneset=geneset, clslevs=clslevs, nets=nets, nodeCats=nodeCats, quant=quant, dprior=dprior)
   return(res)
 }
 
@@ -145,7 +149,8 @@ sdnPredict <- function(model, data, std=TRUE) {
   ind <- NULL
   for(k in 1:ncol(pmdata)) {
     dd <- t(matrix(pmdata[,k], nrow=ncats))
-    r <- sapply(nets, function(net) sapply(1:net@numnodes, function(j) log(sum(dd[j,]*net@probs[[j]]))))
+    ##r <- sapply(nets, function(net) sapply(1:net@numnodes, function(j) log(sum(dd[j,]*net@probs[[j]]))))
+    r <- sapply(nets, function(net) sapply(1:net@numnodes, function(j) sum(net@probs[[j]]*log(dd[j,]/net@probs[[j]]))))
     ind <- apply(r, 1, function(rr) sum(abs(rr)>=Inf | is.nan(rr) | is.na(rr)))
     ind <- ind <= 0
     r <- r[ind,]
@@ -164,8 +169,37 @@ sdnPredict <- function(model, data, std=TRUE) {
   return(pl)
 }
 
+
+auroc <- function(pred, tres){
+  if(is.na(sum(tres)) || length(pred) != length(tres))
+    return(NA)
+  n <- length(pred)
+  ind <- order(pred, decreasing=TRUE)
+  
+  tp <- NULL
+  tn <- NULL
+  fp <- NULL
+  fn <- NULL
+  for(i in ind) {
+    x <- pred[i]
+    tp <- c(tp, sum(pred >= x & tres))
+    fp <- c(fp, sum(pred >= x & !tres))
+    tn <- c(tn, sum(pred < x & !tres))
+    fn <- c(fn, sum(pred < x & tres))
+  }
+  fp <- c(0,fp)
+  tp <- c(0,tp)
+  tn <- c(sum(!tres),tn)
+  fn <- c(sum(tres),fn)
+  spec <- tn/(tn+fp)
+  rec <- tp/(tp+fn)
+  ff <- sum((rec[-1]-rec[1:(length(rec)-1)])*(spec[-1]+spec[1:(length(spec)-1)])/2)
+  return(ff)
+}
+
 sdnEvaluate <- function(train, test, ncats = 3, nodeCats = NULL, std=FALSE) {
 
+  bseparatedisc <- FALSE
   quant <- "quantile"
 
   if(nrow(train$cdata)*ncol(train$cdata) <= 0 || nrow(test$cdata)*ncol(test$cdata) <= 0)
@@ -244,15 +278,13 @@ sdnEvaluate <- function(train, test, ncats = 3, nodeCats = NULL, std=FALSE) {
     test$cdata <- test$cdata/sqrt(vv/ncol(test$cdata))
   }
 
-  ##n1 <- sum(train$cls==clslevs[1])
-  ##n2 <- sum(train$cls==clslevs[2])
-  
-  bres1 <- NULL
-  bres1cls <- NULL
-  tres <- test$cls
+  N <- numnodes
+  n1 <- sum(train$cls==clslevs[1])
+  n2 <- sum(train$cls==clslevs[2])
+  dprior <- log(n1) - log(n2)
   
   ## soft discretization
-  if(std) {
+  if(bseparatedisc) {
     qdata <- sdnet::cnDiscretize(train$cdata, ncats, mode="soft", marginal=quant, learnset=1:ncol(train$cdata), cover=0.95)
     pdata <- qdata$pdata
     rm(qdata)
@@ -273,19 +305,36 @@ sdnEvaluate <- function(train, test, ncats = 3, nodeCats = NULL, std=FALSE) {
   bnet <- sdnet::cnNew(geneset, cats=nodeCats, pars=vector("list",numnodes), probs=NULL, dagonly=TRUE)
  
   ## sets P(X=k) \propto \sum_s q_k(y^s) = P(y^s|X=k)/(\sum_m P(y^s|X=m))
+  bnet <- sdnet::cnSetProb(bnet, pdata, nodeCats=nodeCats[bnet@nodes], softmode=TRUE)
   net1 <- sdnet::cnSetProb(bnet, dat1, nodeCats=nodeCats, softmode=TRUE)
   net2 <- sdnet::cnSetProb(bnet, dat2, nodeCats=nodeCats, softmode=TRUE)
+  
+  pl1 <- -sapply(1:net1@numnodes, function(j) sum(bnet@probs[[j]]*log(net1@probs[[j]]/bnet@probs[[j]])))
+  pl1 <- 2*(n1+n2)*(n1/n2)*pl1
+  pvals <- 1 - pchisq(pl1, ncats-1)
+  ind <- order(pvals, decreasing=FALSE)
+  hc <- sapply(1:N, function(i) sqrt(N)*(i/N-pvals[ind[i]])/sqrt((i/N)*(1-i/N)))
+  pind <- which(pvals > 1/N & !is.nan(hc))
+  k <- pind[which(hc[pind]==max(hc[pind]))[1]]	
+  if(k<2) k <- 2
+  ind <- ind[1:k]
   rm(bnet)
-
+  
+  bres1 <- NULL
+  bres1cls <- NULL
+  tres <- test$cls
+  
   for(k in 1:ncol(pmdata)) {
     dd <- t(matrix(pmdata[,k], nrow=ncats))
-    pl1 <- sapply(1:net1@numnodes, function(j) log(sum(dd[j,]*net1@probs[[j]])))
-    pl2 <- sapply(1:net2@numnodes, function(j) log(sum(dd[j,]*net2@probs[[j]])))
-    pdl <- pl2 - pl1
+    ##pl1 <- sapply(ind, function(j) log(sum(dd[j,]*net1@probs[[j]])))
+    ##pl2 <- sapply(ind, function(j) log(sum(dd[j,]*net2@probs[[j]])))
+    pl1 <- sapply(ind, function(j) sum(net1@probs[[j]]*log(dd[j,]/net1@probs[[j]])))
+    pl2 <- sapply(ind, function(j) sum(net2@probs[[j]]*log(dd[j,]/net2@probs[[j]])))
+    pdl <- pl2-pl1
     pdl <- sum(pdl[!is.nan(pdl)&abs(pdl)<Inf])
     bres1 <- c(bres1, pdl)
     sel <- clslevs[1]
-    if(pdl >= 0)
+    if(pdl > 0)
       sel <- clslevs[2]
     bres1cls <- c(bres1cls, sel)
   }
@@ -293,40 +342,16 @@ sdnEvaluate <- function(train, test, ncats = 3, nodeCats = NULL, std=FALSE) {
   rm(net1)
   rm(net2)
 
+  ##dp <- quantile(bres1, sum(tres==1)/length(tres))
+  ##bres1cls <- bres1
+  ##bres1cls[bres1 < dp] <- clslevs[1]
+  ##bres1cls[bres1 >= dp] <- clslevs[2]
   names(bres1cls) <- colnames(test$cdata)
   auc1 <- auroc(bres1, tres)
 
-  bres1 <- 0.5*(sum(bres1cls==clslevs[1]&tres==clslevs[1])/sum(tres==clslevs[1]) + sum(bres1cls==clslevs[2]&tres==clslevs[2])/sum(tres==clslevs[2]))
+  acc1 <- 0.5*(sum(bres1cls==clslevs[1]&tres==clslevs[1])/sum(tres==clslevs[1]) + sum(bres1cls==clslevs[2]&tres==clslevs[2])/sum(tres==clslevs[2]))
     
-  res <- c(bres1, auc1)
+  res <- c(acc1, auc1)
   names(res) <- c("acc", "auc")
-  return(list(res, bres1cls))
-}
-
-
-auroc <- function(pred, tres){
-  if(is.na(sum(tres)) || length(pred) != length(tres))
-    return(NA)
-  n <- length(pred)
-  ind <- order(pred, decreasing=TRUE)
-  
-  tp <- NULL
-  tn <- NULL
-  fp <- NULL
-  fn <- NULL
-  for(i in ind) {
-    x <- pred[i]
-    tp <- c(tp, sum(pred >= x & tres))
-    fp <- c(fp, sum(pred >= x & !tres))
-    tn <- c(tn, sum(pred < x & !tres))
-    fn <- c(fn, sum(pred < x & tres))
-  }
-  fp <- c(0,fp)
-  tp <- c(0,tp)
-  tn <- c(sum(!tres),tn)
-  fn <- c(sum(tres),fn)
-  spec <- tn/(tn+fp)
-  rec <- tp/(tp+fn)
-  ff <- sum((rec[-1]-rec[1:(length(rec)-1)])*(spec[-1]+spec[1:(length(spec)-1)])/2)
-  return(ff)
+  return(list(res, bres1, bres1cls, geneset=geneset[ind]))
 }

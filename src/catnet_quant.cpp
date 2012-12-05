@@ -32,7 +32,7 @@ extern int g_setseed;
 extern size_t g_memcounter;
 
 /* general gaussian mixture */
-inline void _gmm(double *pdata, int ndata, int numCats, double *pmu, double *psig, double *pw, double cover=0.95, int maxiter=8) {
+inline void _gmm(double *pdata, int ndata, int numCats, double *pmu, double *psig, double *pw, double cover=0.95, int maxiter=8, double feps=CATNET_EPS) {
 
 	int c, i, iter;
 	double *qvals, *poldw, *pwc, ff, fsum;
@@ -79,7 +79,7 @@ inline void _gmm(double *pdata, int ndata, int numCats, double *pmu, double *psi
 			fsum = 1/sqrt(psig[c]);
 			for(i = 0; i < ndata; i++) {
 				ff = fsum*(pdata[i]-pmu[c]);
-				pwc[i*numCats+c] = pw[c]*exp(-0.5*ff*ff);
+				pwc[i*numCats+c] = pw[c]*exp(-0.5*ff*ff)*fsum;
 			}
 		}
 		for(i = 0; i < ndata; i++) {
@@ -124,7 +124,7 @@ inline void _gmm(double *pdata, int ndata, int numCats, double *pmu, double *psi
 			ff = poldw[c]-pw[c];
 			fsum += ff*ff;
 		}
-		if(fsum < CATNET_EPS)
+		if(fsum < feps)
 			break;
 	}
 
@@ -146,7 +146,7 @@ inline void _gmm(double *pdata, int ndata, int numCats, double *pmu, double *psi
 }
 
 /* quantile gaussian mixture */
-inline void _qmm(double *pdata, int ndata, int numCats, double *pmu, double *psig, double *pw, double cover=0.95, int maxiter=8) {
+inline void _qmm1(double *pdata, int ndata, int numCats, double *pmu, double *psig, double *pw, double cover=0.95, int maxiter=8, double feps=CATNET_EPS) {
 
 	int c, i, j, *pranks, *pind;
 	double *qvals, *pwc, ff, fsum;
@@ -207,7 +207,7 @@ inline void _qmm(double *pdata, int ndata, int numCats, double *pmu, double *psi
 		fsum = 1/sqrt(psig[c]);
 		for(i = 0; i < ndata; i++) {
 			ff = fsum*(pdata[i]-pmu[c]);
-			pwc[i*numCats+c] = pw[c]*exp(-0.5*ff*ff);
+			pwc[i*numCats+c] = pw[c]*exp(-0.5*ff*ff)*fsum;
 		}
 	}
 	for(i = 0; i < ndata; i++) {
@@ -256,8 +256,131 @@ inline void _qmm(double *pdata, int ndata, int numCats, double *pmu, double *psi
 	CATNET_FREE(pwc);
 }
 
+inline void _qmm(double *pdata, int ndata, int numCats, double *pmu, double *psig, double *pw, double cover=0.95, int maxiter=8, double feps=CATNET_EPS) {
+
+	int c, i, j, *pranks, *pind, iter;
+	double *pwc, *poldw, ff, fsum;
+
+	if(numCats < 1)
+		numCats = 1;
+	if(maxiter < 2)
+		maxiter = 2;
+	if(cover < 0 || cover > 1)
+		cover = 1;
+
+	pwc = (double*)CATNET_MALLOC((ndata*numCats)*sizeof(double));
+	poldw = (double*)CATNET_MALLOC((numCats)*sizeof(double));
+	pranks = (int*)CATNET_MALLOC(ndata*sizeof(int));
+	pind = (int*)CATNET_MALLOC(ndata*sizeof(int));
+
+	for(i =0; i < ndata; i++) {
+		pranks[i] = 0;
+		for(j = 0; j < ndata; j++)
+			if(pdata[j] < pdata[i])
+				pranks[i]++;		
+	}
+	for(i = 0; i < ndata; i++) {
+		for(j = 0; j < ndata; j++) {
+			if(pranks[j] == i) {
+				pind[i] = j++;
+				for(; j < ndata; j++)
+					if(pranks[j] == i)
+						pranks[j]++;
+				break;
+			}
+		}
+	}
+	for(i = 0; i < numCats; i++) {
+		c = (int)(ndata*(i+1)/(numCats+1));
+		if(c < 0) c = 0;
+		if(c >= ndata) c = ndata-1;
+		pmu[i] = pdata[pind[c]];
+	}
+	CATNET_FREE(pranks);
+	CATNET_FREE(pind);
+
+	for(i = 0; i < numCats; i++) {
+		psig[i] = (pmu[numCats-1] - pmu[0])/2;
+		psig[i] = psig[i]*psig[i];
+		pw[i] = 1/(double)numCats;
+	}
+
+	//Rprintf("mu,sig,pw: (%d) \n", maxiter);
+	//for(c = 0; c < numCats; c++) 
+	//	Rprintf("%f, %f, %f\n", pmu[c], psig[c], pw[c]);
+
+	for(iter=0; iter < maxiter; iter++) {
+
+		memcpy(poldw, pw, numCats*sizeof(double));
+
+		for(c = 0; c < numCats; c++) {
+			fsum = 1/sqrt(psig[c]);
+			for(i = 0; i < ndata; i++) {
+				ff = fsum*(pdata[i]-pmu[c]);
+				pwc[i*numCats+c] = pw[c]*exp(-0.5*ff*ff)*fsum;
+			}
+		}
+		for(i = 0; i < ndata; i++) {
+			fsum = 0;
+			for(c = 0; c < numCats; c++)
+				fsum += pwc[i*numCats+c];
+			fsum = 1/fsum;
+			for(c = 0; c < numCats; c++)
+				pwc[i*numCats+c] *= fsum;
+		}
+		for(c = 0; c < numCats; c++) {
+			fsum = 0;
+			for(i = 0; i < ndata; i++)
+				fsum += pwc[i*numCats+c]; 
+			psig[c] = 0;
+			for(i = 0; i < ndata; i++) {
+				ff = pdata[i]-pmu[c];
+				psig[c] += pwc[i*numCats+c]*ff*ff;
+			}
+			psig[c] /= fsum;
+			if(psig[c] < CATNET_EPS)
+				psig[c] = CATNET_EPS;
+			pw[c] = 0;
+			for(i = 0; i < ndata; i++)
+				pw[c] += pwc[i*numCats+c];
+			pw[c] /= ndata;
+		}
+
+		fsum = 0;
+		for(c = 0; c < numCats; c++) 
+			fsum += psig[c];
+		fsum /= numCats;
+		for(c = 0; c < numCats; c++) 
+			psig[c] = fsum;
+
+		fsum = 0;
+		for(c = 0; c < numCats; c++) {
+			ff = poldw[c]-pw[c];
+			fsum += ff*ff;
+		}
+		if(fsum < feps)
+			break;
+
+	} // iter
+
+	//Rprintf("mu,sig,pw: (%d, %f) \n", iter, fsum);
+	//for(c = 0; c < numCats; c++) 
+	//	Rprintf("%f, %f, %f\n", pmu[c], psig[c], pw[c]);
+
+	//Rprintf("w:\n");
+	//for(c = 0; c < numCats; c++) 
+	//	Rprintf("%f, %f \n", pw[c]);
+	//Rprintf("\n");
+
+	for(c = 0; c < numCats; c++)
+		psig[c] = sqrt(psig[c]);
+
+	CATNET_FREE(poldw);
+	CATNET_FREE(pwc);
+}
+
 /* uniform gaussian mixture */
-inline void _umm(double *pdata, int ndata, int numCats, double *pmu, double *psig, double *pw, double cover=0.95, int maxiter=8) {
+inline void _umm(double *pdata, int ndata, int numCats, double *pmu, double *psig, double *pw, double cover=0.95, int maxiter=8, double feps=CATNET_EPS) {
 
 	int c, i;
 	double *qvals, *poldw, *pwc, ff, fsum;
@@ -333,7 +456,7 @@ inline void _umm(double *pdata, int ndata, int numCats, double *pmu, double *psi
 	for(c = 0; c < numCats; c++) 
 		psig[c] = fsum;
 	
-	//Rprintf("mu,sig,pw: (%d) \n", iter);
+	//Rprintf("mu,sig,pw: \n");
 	//for(c = 0; c < numCats; c++) 
 	//	Rprintf("%f, %f, %f\n", pmu[c], psig[c], pw[c]);
 
@@ -350,10 +473,10 @@ inline void _umm(double *pdata, int ndata, int numCats, double *pmu, double *psi
 	CATNET_FREE(pwc);
 }
 
-SEXP catnetSoftQuant(SEXP rSamples, SEXP rNumCats, SEXP rLearnset, SEXP rCover, SEXP rMode, SEXP rMaxiter) {
+SEXP catnetSoftQuant(SEXP rSamples, SEXP rNumCats, SEXP rLearnset, SEXP rCover, SEXP rMode, SEXP rMaxiter, SEXP rEps) {
 
 	int gmode, nnode, numSamples, numNodes, *pNumCats, numCats, c, j, maxiter, nLearnset, ndataline, *pLearnset;
-	double *pSamples, *prow, *pdata, fCover, fsum, *pallmu, *pmu, *pallsig, *psig, *pallw, *pw, pp, pmax; 
+	double *pSamples, *prow, *pdata, fCover, fsum, *pallmu, *pmu, *pallsig, *psig, *pallw, *pw, pp, pmax, feps; 
 	int *ddata, cmax;
 	SEXP dim;
 	SEXP plist, rvec = R_NilValue;
@@ -401,6 +524,10 @@ SEXP catnetSoftQuant(SEXP rSamples, SEXP rNumCats, SEXP rLearnset, SEXP rCover, 
 	fCover = NUMERIC_POINTER(rCover)[0];
 	UNPROTECT(1);
 
+	PROTECT(rEps = AS_NUMERIC(rEps));
+	feps = NUMERIC_POINTER(rEps)[0];
+	UNPROTECT(1);
+
 	PROTECT(rMode = AS_CHARACTER(rMode));
 	gmode = 0;
 	if (!strncmp(CHARACTER_VALUE(rMode), "gauss", 5))
@@ -434,12 +561,12 @@ SEXP catnetSoftQuant(SEXP rSamples, SEXP rNumCats, SEXP rLearnset, SEXP rCover, 
 			prow[j] = pSamples[pLearnset[j]*numNodes + nnode];
 
 		switch(gmode) {
-		case 2: _umm(prow, nLearnset, pNumCats[nnode], pmu, psig, pw, fCover, maxiter);
+		case 2: _umm(prow, nLearnset, pNumCats[nnode], pmu, psig, pw, fCover, maxiter, feps);
 			break;
-		case 3: _qmm(prow, nLearnset, pNumCats[nnode], pmu, psig, pw, fCover, maxiter);
+		case 3: _qmm(prow, nLearnset, pNumCats[nnode], pmu, psig, pw, fCover, maxiter, feps);
 			break;
 		default:
-			_gmm(prow, nLearnset, pNumCats[nnode], pmu, psig, pw, fCover, maxiter);
+			_gmm(prow, nLearnset, pNumCats[nnode], pmu, psig, pw, fCover, maxiter, feps);
 		}
 
 		fsum = 0;
