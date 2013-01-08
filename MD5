@@ -1,5 +1,5 @@
-d86151541546f7bba6b77f373b49de76 *DESCRIPTION
-2d6daaad587f7390754ef52651c0ff29 *NAMESPACE
+bb15d9bfa57c81336aee341b5c01428f *DESCRIPTION
+86d1813fed03b798eaf7e2249f75fe36 *NAMESPACE
 a49ce18a144315503c2f888d1e51950f *R/catnet.bif.R
 c7c9f43c14f4754d9b68b9256b22e7b1 *R/catnet.categor.R
 c79e1c7cf75238d22bfc013c21045af4 *R/catnet.chisq.R
@@ -24,7 +24,7 @@ dd5e64ee779ee118c23878634efc3204 *R/catnet.marginal.prob.R
 7bdb26fefaedb4f649b5a69ddd5f04f2 *R/catnet.xdsl.R
 f3071406b90925924b88334f6b070d05 *R/expres.r
 6c9f150ab841c9761e542a0dfe5e4b45 *R/graph2catnet.R
-3b1d2f554f4d0ee1947ced695e278b21 *R/zzz.R
+63f1c98369451964ed3ff5f7574ef6ff *R/zzz.R
 d54daaec43d8d9c001f648b5d9d172a9 *data/tyr1.rda
 87714d7eae17d670f24a45b90a68fb93 *data/tyr2.rda
 e7743da900b717caae9bffdb6ece1524 *demo/00Index
@@ -81,7 +81,7 @@ a788e809b4fa2d3d69c920160b3309f5 *src/cache.h
 0a1fd6670a14a039762cb4b49948984c *src/catnet_entropy.cpp
 4d33c26e20dcd9604df88546718f648a *src/catnet_quant.cpp
 f6384b0f682bbb8aeda415b7a49800a4 *src/catnet_rexport.cpp
-902ca1b9550671d4a4ea6c4998ab6747 *src/catnet_rexport.h
+29e6d21e3190bb4277f717af6b1fdb6a *src/catnet_rexport.h
 4fc5c822762e13ce894f2ccd0931dfd0 *src/catnet_search.h
 72dffe9c724deb14d08603064995103c *src/catnetd.h
 6513eeef2d57bdaaafbc0c5cd6d13aa5 *src/catnetp.h
