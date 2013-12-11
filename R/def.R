@@ -455,7 +455,6 @@ validCatNetwork <- function(obj, quietly=FALSE) {
       break 
     nn <- 1 
     for(j in (1:length(opars[[i]]))) {   
-      #cat(i, length(opars[[i]]),"\n")   
       ipar <- opars[[i]][j]   
       if(ipar < 1 || ipar > nnodes) {   
          if(!quietly)   
@@ -528,10 +527,7 @@ parentSetComplexity <- function(numnodecats, pars, cats) {
 
 condNonUnifComplexity <- function(idroot, ppars, pcatlist, probs, idx) {
   if(is.null(ppars) || length(idx) < 1) {
-    ## if(length(pprobs[[idroot]]) != length(pcatlist[[idroot]]))
-    ## stop("length(pprobs[[idroot]]) != length(pcatlist[[idroot]]))")
     nodep <- probs
-    ##cat(nodep, "\n")
     nodep <- nodep[nodep!=0]
     return(as.numeric(length(pcatlist[[idroot]])-1)) 
   }
@@ -612,7 +608,6 @@ function(object, nodeIndices, indirectEdges = FALSE) {
       nodepars <- object@pars[[i]] 
       while(!is.null(nodepars)) { 
         pool <- NULL 
-        ##cat(nodepars, "\n") 
         for(par in nodepars) { 
           id <-  which(nodeIndices==par) 
           if(length(id) > 0 && 
@@ -637,17 +632,15 @@ function(object, nodeIndices, indirectEdges = FALSE) {
     if(maxcats < length(cats[[j]])) 
       maxcats <- length(cats[[j]])
   } 
-   
-  newnet <- new("catNetwork", numnodes, as.integer(maxpars), as.integer(maxcats)) 
-  newnet@nodes <- nodes 
-  newnet@pars <- pars 
-  newnet@cats <- cats
+
+  newnet <- cnNew(nodes, cats, pars, probs = NULL, dagonly = TRUE)
+  ##newnet <- new("catNetwork", numnodes, as.integer(maxpars), as.integer(maxcats)) 
+  ##newnet@nodes <- nodes 
+  ##newnet@pars <- pars 
+  ##newnet@cats <- cats
   problist <- vector("list", numnodes)
-  ##problist <- lapply(1:numnodes, function(parid, obj) { 
-  ##  setDefaultProb(parid, pars[[parid]], cats, 1:length(obj@pars[[parid]])) 
-  ##}, newnet) 
   newnet@probs <- problist 
-  
+
   pc <- sapply(1:newnet@numnodes, function(x) nodecomplx(newnet, x)) 
   newnet@complx <- as.integer(sum(pc))
       
@@ -678,11 +671,7 @@ reorderNodeProb <- function(idroot, ppars, cats, catvec, idx, prob,
     newidx <- NULL 
     if(length(newparents) > 0) 
       newidx <- seq(1, length(newparents)) 
-    ##cat("newidx = ", newidx, "\n") 
     newprob <- initSampleProb(newroot, newparents, newcategories, newidx) 
-    ##catvec <- catvec[nodeIndices] 
-    ##cat("catvec = ", catvec, "\n") 
-    ##cat("len(prob) = ", length(prob), "\n") 
     newprob <- setProbSlot(newroot, newparents, newcategories, 
                            newidx, newprob, catvec, prob) 
     return(newprob) 
@@ -709,13 +698,10 @@ function(object, nodeIndices) {
     warning("length(nodeIndices) != object@numnodes") 
     return(object) 
   } 
-  ##cat(nodeIndices, "\n") 
   nodeIndicesInvert <- nodeIndices 
   for(i in 1:object@numnodes) { 
     nodeIndicesInvert[i] = which(nodeIndices == i) 
   } 
- 
-  ##cat(nodeIndicesInvert, "\n") 
    
   newnodes <- object@nodes[nodeIndices] 
   pars <- vector("list", object@numnodes) 

@@ -363,7 +363,7 @@ nodeCondLoglik <- function(idroot, ppars, pcatlist, idx, problist) {
 setMethod("cnSetProb", "catNetwork",
           function(object, data, pert=NULL, nodeCats = NULL, softmode = FALSE) {
             
-            if(!is.matrix(data) && !is.data.frame(data))
+            if((!is.matrix(data) && !is.data.frame(data)) || nrow(data)*ncol(data)<1)
               stop("'data' should be a matrix or data frame of cats")
 
             if(is.data.frame(data)) {

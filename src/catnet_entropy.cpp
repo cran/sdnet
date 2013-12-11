@@ -245,7 +245,7 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 	porder = (int*)CATNET_MALLOC(numnodes*sizeof(int));
 	pnoderanks = (double*)CATNET_MALLOC(2*numnodes*sizeof(double));
 
-	// categoies
+	// categories
 	pNodeNumCats = (int*)CATNET_MALLOC(numnodes*sizeof(int));
 	pNodeCats = (int**)CATNET_MALLOC(numnodes*sizeof(int*));
 	memset(pNodeCats, 0, numnodes*sizeof(int*));

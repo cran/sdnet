@@ -262,7 +262,7 @@ cnNodeSampleProb <- function(node, pars, data, pert = NULL) {
   
   if(numSamples < 1)
     stop("No samples are given\n")
-  if(length(node) != 1 || length(pars) != 1)
+  if(length(node) != 1)
     stop("Only one node is expected\n")
   
   if(length(pars) == 0)
@@ -309,7 +309,7 @@ cnNodeSampleProb <- function(node, pars, data, pert = NULL) {
 }
 
 setMethod("cnNodeLoglik", c("catNetwork"), 
-          function(object, node, data, pert=NULL, softmode=FALSE, klmode=FALSE) {
+          function(object, node, data, pert=NULL, softmode=FALSE, klmode=0) {
 
             if(!is.matrix(data) && !is.data.frame(data))
               stop("'data' should be a matrix or data frame of cats")

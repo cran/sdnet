@@ -39,7 +39,7 @@ static const R_CallMethodDef R_CallDef[] = {
 	{"ccnSamples", (DL_FUNC)&catnetSamples, 4},
 	{"ccnSetSeed", (DL_FUNC)&catnetSetSeed, 1},
 	{"ccnCatnetFromDagEvaluate", (DL_FUNC)&createCatnetFromDagEvaluate, 2},
-	{"ccnSoftQuant", (DL_FUNC)&catnetSoftQuant, 7},
+	{"ccnSoftQuant", (DL_FUNC)&catnetSoftQuant, 8},
 	{NULL, NULL, 0},
 };
 

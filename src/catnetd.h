@@ -256,21 +256,29 @@ public:
 
 		ncount = 0;	
 		for (j = 0; j < nsamples; j++) {
-			for (ipar = 0; ipar < nodepars; ipar++) {
+			for (ipar = 0; ipar < nodepars; ipar++) 
 				pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
-			}
 			pnodeprob = m_pProbLists[nnode]->find_slot(0, pnodesample, 0);
-			// if there are NAs, pnodeprob maybe 0
+
 			samp = psamples[j * m_numNodes + nnode];
-			if (pnodeprob && samp >= 0 && samp < m_numCategories[nnode]) {
-				if(pnodeprob[samp] > 0)
-					loglik += (t_prob)log((double)pnodeprob[samp]);
-				else {
-					loglik = (t_prob)-FLT_MAX;
-					break;
-				}
-				ncount++;
+			if(klmode == 1) {
+				/* Pearson */ 
 			}
+			if(klmode == 2) {
+				/* KL */ 
+			}
+			else {
+				// if there are NAs, pnodeprob maybe 0
+				if (pnodeprob && samp >= 0 && samp < m_numCategories[nnode]) {
+					if(pnodeprob[samp] > 0)
+						loglik += (t_prob)log((double)pnodeprob[samp]);
+					else {
+						loglik = (t_prob)-FLT_MAX;
+						break;
+					}
+					ncount++;
+				}
+			} // klmode
 		}
 		CATNET_FREE(pnodesample);
 
@@ -338,7 +346,7 @@ public:
 	}
 
 	// sets sample conditional probability and returns its log-likelihood
-	t_prob setNodeSampleProbKL(int nnode, int *psamples, int nsamples, int *pClasses, int bNormalize = 0) {
+	t_prob setNodeSampleProbKL(int nnode, int *psamples, int nsamples, int *pClasses, int bNormalize = 0, int bUsePearson = 0) {
 		int i, j;
 		/* psamples have categories in the range [1, m_maxCategories] */
 		t_prob *pnodeprob, floglik;
@@ -390,7 +398,7 @@ public:
 		pClassProb->sampleSize = nclasscount;
 
 		//pClassProb->normalize();
-		m_pProbLists[nnode]->setPrior(pClassProb);
+		m_pProbLists[nnode]->setPrior(pClassProb, bUsePearson);
 
 		/* at this point m_pProbLists[nnode] has counts not probabilities 
 		  find m_pProbLists[nnode]->loglik */

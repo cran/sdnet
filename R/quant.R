@@ -180,7 +180,7 @@ hardDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL,
   return(data)
 }
 
-softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL, cover=0.95, maxiter=100, eps=1e-15) {
+softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL, cover=0.95, maxiter=100, eps=1e-15, weights=NULL) {
 
   if(!is.matrix(data) && !is.data.frame(data))
     stop("data should be a matrix or data frame")
@@ -217,10 +217,15 @@ softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL,
     numcats <- rep(maxcats, numnodes)
 
   maxiter <- as.integer(maxiter)
-  
+
+  if(is.null(weights) || sum(weights) <= 0)
+    weights <- rep(1/numSamples, numSamples)
+  weights[weights < 0] <- 0
+  weights <- weights / sum(weights)
+
   if(marginal == "gauss" || marginal == "uniform" || marginal == "quantile") {
     plist <- .Call("ccnSoftQuant", 
-                          data,  numcats, learnset, cover, marginal, maxiter, eps, 
+                          data, weights, numcats, learnset, cover, marginal, maxiter, eps, 
                           PACKAGE="sdnet")
     pdata <- plist[[1]]
     ddata <- plist[[2]]
@@ -243,13 +248,13 @@ softDiscretize <- function(data, numcats=3, marginal = "uniform", learnset=NULL,
   return(NULL)
 }
 
-cnDiscretize <- function(data, numcats=3, mode="soft", marginal="quantile", learnset=NULL, cover=0.95, maxiter=100, eps=1e-8) {
+cnDiscretize <- function(data, numcats=3, mode="soft", marginal="quantile", learnset=NULL, cover=0.95, maxiter=100, eps=1e-8, weights=NULL) {
   if(marginal != "uniform" && marginal != "quantile" && marginal != "gauss")
     stop("Unsupported marginal")
   if(mode == "hard")
     return(hardDiscretize(data, numcats, marginal = marginal, learnset=learnset, cover=cover, qlevels=NULL))
   if(mode == "soft")
-    return(softDiscretize(data, numcats, marginal = marginal, learnset=learnset, cover=cover, maxiter=maxiter, eps))
+    return(softDiscretize(data, numcats, marginal = marginal, learnset=learnset, cover=cover, maxiter=maxiter, eps, weights))
   stop("Unsupported mode")
 }
 

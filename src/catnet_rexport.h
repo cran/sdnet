@@ -59,6 +59,6 @@ SEXP catnetPearsonPairwise(SEXP rSamples, SEXP rPerturbations);
 SEXP catnetSamples(SEXP cnet, SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRate);
 SEXP catnetReleaseCache();
 SEXP catnetSetSeed(SEXP rSeed);
-SEXP catnetSoftQuant(SEXP rSamples, SEXP rNumCats, SEXP rLearnset, SEXP rCover, SEXP rMode, SEXP rMaxiter);
+SEXP catnetSoftQuant(SEXP rSamples, SEXP rSampleWeights, SEXP rNumCats, SEXP rLearnset, SEXP rCover, SEXP rMode, SEXP rMaxiter);
 
 

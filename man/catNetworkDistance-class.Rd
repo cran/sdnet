@@ -13,8 +13,9 @@
 	\item{\code{tp}:}{an \code{integer}, the number of true positives directed edges.}
         \item{\code{fp}:}{an \code{integer}, the number of false positives directed edges.}
 	\item{\code{fn}:}{an \code{integer}, the number of false negatives directed edges.}
-	\item{\code{sp}:}{a \code{numeric}, the specificity.}
-	\item{\code{sn}:}{a \code{numeric}, the sensitivity.}
+        \item{\code{pr}:}{a \code{numeric}, precision.}
+	\item{\code{sp}:}{a \code{numeric}, specificity.}
+	\item{\code{sn}:}{a \code{numeric}, sensitivity(recall).}
 	\item{\code{fscore}:}{a \code{numeric}, the F-score.}
 	\item{\code{skel.tp}:}{an \code{integer}, the number of true positives undirected edges.}
         \item{\code{skel.fp}:}{an \code{integer}, the number of false positives undirected edges.}

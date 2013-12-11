@@ -48,7 +48,7 @@ cnSearchOrder <- function(data, pert = NULL,
                           maxComplexity = 0, nodeOrder = NULL, nodeCats = NULL, 
                           parentsPool = NULL, fixedParents = NULL, edgeProb = NULL, 
                           echo = FALSE, softmode=FALSE, dagsOnly = FALSE, 
-                          classes = NULL, clsdist = "kl") {
+                          classes = NULL, clsdist = 1) {
 
   if(!is.matrix(data) && !is.data.frame(data))
     stop("data should be a matrix or data frame")
@@ -254,7 +254,7 @@ cnSearchOrder <- function(data, pert = NULL,
       stop("Wrong classes")
     if(length(classes) != numSamples)
       stop("length(classes) != sample size")
-    if(clsdist != "kl" && clsdist != "chisq")
+    if(!clsdist%in%c(0,1,2))
       stop("clsdist should be kl or chisq")
   }
 

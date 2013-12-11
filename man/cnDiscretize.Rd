@@ -8,7 +8,7 @@
 
 \usage{
 cnDiscretize(data, numcats=3, mode = "soft", marginal = "quantile",
-learnset=NULL, cover=0.95, maxiter=100, eps=1e-8)
+learnset=NULL, cover=0.95, maxiter=100, eps=1e-8, weights=NULL)
 }
 
 \arguments{
@@ -20,7 +20,8 @@ learnset=NULL, cover=0.95, maxiter=100, eps=1e-8)
 \item{cover}{a numerical between 0 and 1, proportion of the sample to be used for setting the discretization parameters}
 \item{maxiter}{an \code{integer}, maximum iterations for the mixture of
   Gaussians EM algorithm}
-\item{eps}{an \code{float}, convergence precision number}
+\item{eps}{a \code{numerical}, convergence precision number}
+\item{weights}{a \code{numerical}, sample record weights}
 }
 
 \details{

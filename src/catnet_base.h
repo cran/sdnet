@@ -173,6 +173,8 @@ public:
 				memset(m_parents[i], 0, m_numParents[i] * sizeof(int));
 				if(ppars[i])
 					memcpy(m_parents[i], ppars[i], m_numParents[i] * sizeof(int));
+				if (m_numParents[i] > m_maxParents)
+					m_maxParents = m_numParents[i];
 			}
 		}
 		
@@ -258,6 +260,8 @@ public:
 			return;
 		if (m_pProbLists && m_pProbLists[node])
 			delete m_pProbLists[node];
+		if (m_numParents[node] > m_maxParents)
+			m_maxParents = m_numParents[node];
 		if (!m_pProbLists)
 			m_pProbLists = (PROB_LIST<t_prob>**) CATNET_MALLOC(m_numNodes
 					* sizeof(PROB_LIST<t_prob>*));
@@ -267,7 +271,6 @@ public:
 		int *parcats = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
 		for (int i = 0; i < m_numParents[node]; i++) {
 			parcats[i] = m_numCategories[m_parents[node][i]];
-			//cout << "parcats[i] = " << parcats[i] << "\n";
 		}
 		m_pProbLists[node] = new PROB_LIST<t_prob> (m_numCategories[node],
 				m_maxCategories, m_numParents[node], parcats, pcondprob,
@@ -492,7 +495,7 @@ public:
 			// check par
 			bfound = 0;
 			for (j = 0; j < poolsize + parpoolsize; j++) {
-				if (paux[i] == par) {
+				if (paux[j] == par) {
 					bfound = 1;
 					break;
 				}
@@ -695,7 +698,7 @@ public:
 	virtual t_prob setNodeSampleProb(int nnode, t_sample *psamples, int nsamples, int bNormalize = 0) {
 		return 0;
 	};
-	virtual t_prob setNodeSampleProbKL(int nnode, t_sample *psamples, int nsamples, int *pClasses, int bNormalize = 0) {
+	virtual t_prob setNodeSampleProbKL(int nnode, t_sample *psamples, int nsamples, int *pClasses, int bNormalize = 0, int bUsePearson = 0) {
 		return 0;
 	};
 

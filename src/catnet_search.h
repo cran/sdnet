@@ -237,7 +237,7 @@ public:
 				bEqualCategories = 0;
 		}
 #else
-		nline = 1;
+		nline = 0;
 		maxCategories = 0;
 		for(i = 0; i < numNodes; i++) { 
 			nline += m_pNodeNumCats[i];
@@ -322,9 +322,8 @@ public:
 		pCurCatnetList = (CATNETP<t_prob>**)CATNET_MALLOC(m_nCatnets*sizeof(CATNETP<t_prob>*));
 
 		pSubSamples = 0;
-		if(perturbations) {
+		if(perturbations) 
 			pSubSamples = (t_prob*)CATNET_MALLOC(nline*numSamples*sizeof(t_prob));
-		}
 		/* create a network without edges*/
 		pNewNet = new CATNETP<t_prob>(numNodes, 0/*maxParentSet*/, maxCategories, 0, 0, 0, m_pNodeNumCats);
 #endif
@@ -389,13 +388,13 @@ public:
 					}
 				}
 				if(pClasses)
-					pNewNet->setNodeSampleProbKL(nnode, pSubSamples, numSubSamples, pSubClasses);
+					pNewNet->setNodeSampleProbKL(nnode, pSubSamples, numSubSamples, pSubClasses, /*bNormalize = */0, /*bUsePearson = */pestim->m_klmode==1);
 				else
 					pNewNet->setNodeSampleProb(nnode, pSubSamples, numSubSamples);
 			}
 			else {
 				if(pClasses)
-					pNewNet->setNodeSampleProbKL(nnode, pSamples, numSamples, pClasses);
+					pNewNet->setNodeSampleProbKL(nnode, pSamples, numSamples, pClasses, /*bNormalize = */0, /*bUsePearson = */pestim->m_klmode==1);
 				else
 					pNewNet->setNodeSampleProb(nnode, pSamples, numSamples);
 			}
@@ -575,13 +574,13 @@ public:
 								}
 							}
 							if(pClasses)
-								fLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSubSamples, numSubSamples, pSubClasses);
+								fLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSubSamples, numSubSamples, pSubClasses, /*bNormalize = */0, /*bUsePearson = */pestim->m_klmode==1);
 							else
 								fLogLik = baseCatnet.setNodeSampleProb(nnode, pSubSamples, numSubSamples);
 						}
 						else {
 							if(pClasses)
-								fLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSamples, numSamples, pClasses);
+								fLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSamples, numSamples, pClasses, /*bNormalize = */0, /*bUsePearson = */pestim->m_klmode==1);
 							else
 								fLogLik = baseCatnet.setNodeSampleProb(nnode, pSamples, numSamples);
 						}
@@ -760,13 +759,13 @@ public:
 								}
 							}
 							if(pClasses)
-								fMaxLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSubSamples, numSubSamples, pSubClasses);
+								fMaxLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSubSamples, numSubSamples, pSubClasses, /*bNormalize = */0, /*bUsePearson = */pestim->m_klmode==1);
 							else
 								fMaxLogLik = baseCatnet.setNodeSampleProb(nnode, pSubSamples, numSubSamples);
 						}
 						else {
 							if(pClasses)
-								fMaxLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSamples, numSamples, pClasses);
+								fMaxLogLik = baseCatnet.setNodeSampleProbKL(nnode, pSamples, numSamples, pClasses, /*bNormalize = */0, /*bUsePearson = */pestim->m_klmode==1);
 							else
 								fMaxLogLik = baseCatnet.setNodeSampleProb(nnode, pSamples, numSamples);
 						}
@@ -839,13 +838,6 @@ public:
 						}
 						if(pCurCatnetList[complx] && 
 							pCurCatnetList[complx]->loglik() < tempLogLik) {
-//printf("parset[%d][%f][%d][%d], k=%d\n", nnode+1, fMaxLogLik, nodecomplx, d, k);
-/*if(nnode==23) {
-printf("parset[%d][%f][%d] = ", nnode+1, fMaxLogLik, nodecomplx);
-for(int ii = 0; ii < d; ii++)
-	printf("%d ", idparset[ii]);
-printf("\n");
-}*/
 								*pCurCatnetList[complx] = *m_pCatnets[k];
 								pCurCatnetList[complx]->setParents(nnode, idparset, d);
 								pCurCatnetList[complx]->setNodeProb(nnode, &probMaxNode);

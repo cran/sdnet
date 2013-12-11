@@ -9,6 +9,7 @@ setMethod("initialize", "catNetworkDistance",
             .Object@tp <- tp
             .Object@fp <- fp
             .Object@fn <- fn
+            .Object@pr <- 0
             .Object@sp <- 0
             .Object@sn <- 0
             .Object@fscore <- 0
@@ -75,26 +76,26 @@ setMethod("show", "catNetworkDistance",
             })
 
 setMethod("cnCompare", c("catNetwork","catNetwork"),
-          function(object1, object2, extended = TRUE) {
+          function(object1, object2, extended = FALSE) {
             return(.compare(object1, object2, extended))
           })
 
 setMethod("cnCompare", c("catNetwork","matrix"),
-          function(object1, object2, extended = TRUE) {
+          function(object1, object2, extended = FALSE) {
             return(.compare(object1, object2, extended))
           })
 
 setMethod("cnCompare", c("catNetwork","list"),
-          function(object1, object2, extended = TRUE) {
+          function(object1, object2, extended = FALSE) {
             return(findNetworkDistances(object1, as.integer(1), object2, extended))
           })
 
 setMethod("cnCompare", c("catNetwork","catNetworkEvaluate"),
-          function(object1, object2, extended = TRUE) {
+          function(object1, object2, extended = FALSE) {
             return(findNetworkDistances(object1, object2@numsamples, object2@nets, extended))
           })
 
-.compare <- function(object1 ,object2, extended = TRUE) {
+.compare <- function(object1 ,object2, extended = FALSE) {
 
   if(!is(object1, "catNetwork"))
     stop("catNetwork should be specified")
@@ -138,13 +139,18 @@ setMethod("cnCompare", c("catNetwork","catNetworkEvaluate"),
   out@fp <- sum(mpartrue == 0 & mpar == 1)
 
   tn <- sum(mpartrue==0 & mpar==0)
+  out@pr <- 1
+  if(out@tp+out@fp>0)
+    out@pr <- out@tp/(out@tp+out@fp)
   out@sp <- 1
   if(tn+out@fp>0)
     out@sp <- tn/(tn+out@fp)
   out@sn <- 1
   if(out@tp+out@fn>0)
     out@sn <- out@tp/(out@tp+out@fn)
-  out@fscore <- 2*out@sp*out@sn/(out@sp+out@sn)
+  out@fscore <- 0
+    if(out@pr+out@sn > 0)
+  out@fscore <- 2*out@pr*out@sn/(out@pr+out@sn)
 
   out@skel.tp <- sum((t(mpartrue)+mpartrue)==1 & (t(mpar)+mpar)==1)/2
   out@skel.fn <- sum((t(mpartrue)+mpartrue) == 1 & (t(mpar)+mpar) == 0)/2
@@ -213,7 +219,7 @@ setMethod("cnCompare", c("catNetwork","catNetworkEvaluate"),
 }
 
 
-findNetworkDistances <- function(object, numsamples, nets, extended = TRUE) {
+findNetworkDistances <- function(object, numsamples, nets, extended = FALSE) {
 
   nnets <- length(nets)
   if(nnets==0)
@@ -269,13 +275,18 @@ findNetworkDistances <- function(object, numsamples, nets, extended = TRUE) {
     out@fp[i] <- sum(mpartrue == 0 & mpar == 1)
 
     tn <- sum(mpartrue==0 & mpar==0)
+    out@pr[i] <- 1
+    if(out@tp[i]+out@fp[i]>0)
+      out@pr[i] <- out@tp[i]/(out@tp[i]+out@fp[i])
     out@sp[i] <- 1
     if(tn+out@fp[i]>0)
       out@sp[i] <- tn/(tn+out@fp[i])
     out@sn[i] <- 1
     if(out@tp[i]+out@fn[i]>0)
       out@sn[i] <- out@tp[i]/(out@tp[i]+out@fn[i])
-    out@fscore[i] <- 2*out@sp[i]*out@sn[i]/(out@sp[i]+out@sn[i])
+    out@fscore[i] <- 0
+    if(out@pr[i]+out@sn[i] > 0)
+      out@fscore[i] <- 2*out@pr[i]*out@sn[i]/(out@pr[i]+out@sn[i])
     
     out@skel.tp[i] <- sum((t(mpartrue)+mpartrue)==1 & (t(mpar)+mpar)==1)/2
     out@skel.fn[i] <- sum((t(mpartrue)+mpartrue) == 1 & (t(mpar)+mpar) == 0)/2

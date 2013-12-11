@@ -181,7 +181,7 @@ public:
 		return(loglik);
 	}
 
-	t_prob nodeLoglikKL(t_ind nnode, t_sample *pSamples, int& nsamples, t_ind *pars, int numPars, int *pClasses) {
+	t_prob nodeLoglikKL(t_ind nnode, t_sample *pSamples, int& nsamples, t_ind *pars, int numPars, int *pClasses, int bUsePearson = 0) {
 		int i, k, kpad, pad, nProbSize, samp, ncount, nodecats, *pcats;
 		/* pSamples have categories in the range [1, nodecats] */
 		t_prob loglik, psum,  *prob2, psum2;
@@ -239,10 +239,20 @@ public:
 			for (i = 0; i < nodecats; i++)
 				psum2 += prob2[k + i];
 			if (psum > 0 && psum2 > 0) {
-				psum = psum2 / psum;
 				for (i = 0; i < nodecats; i++) 
-					if(m_prob[k + i] > 0 && prob2[k + i] > 0)
-						loglik += m_prob[k + i] * log(m_prob[k + i] * psum / prob2[k + i]);
+					prob2[k + i] /= psum2;
+				if(bUsePearson) {
+					for (i = 0; i < nodecats; i++) 
+						if(prob2[k + i] > 0) {
+							psum2 = m_prob[k + i]/psum - prob2[k + i];
+							loglik += psum * psum * psum2 * psum2 / m_prob[k + i];
+						}
+				}
+				else {
+					for (i = 0; i < nodecats; i++) 
+						if(m_prob[k + i] > 0 && prob2[k + i] > 0)
+							loglik += m_prob[k + i] * log(m_prob[k + i] / (psum*prob2[k + i]));
+				}
 			}
 			k += nodecats;
 		}
@@ -254,8 +264,8 @@ public:
 	}
 #else
 	void _unlist_parent_probs(t_ind nnode, t_ind *pnodepars, int nodepars, t_prob *psample, 
-				t_prob *plist = 0, int parid = -1, int parcat = -1, 
-				t_prob ptemp = 1, int &listind = 0, t_prob fact = 0) {
+				int &listind, t_prob *plist = 0, int parid = -1, int parcat = -1, 
+				t_prob ptemp = 1, t_prob fact = 0) {
 		int i, ncat, sind;
 		if(!plist || listind < 0)
 			return;
@@ -302,7 +312,7 @@ public:
 		for(i = 0; i < pnodepars[parid]; i++)
 			sind += m_pNodeNumCats[i];
 		for(parcat = 0; parcat < m_pNodeNumCats[nnode]; parcat++)
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psample, plist, parid, parcat, ptemp*psample[sind+parcat], listind, fact);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psample, listind, plist, parid, parcat, ptemp*psample[sind+parcat], fact);
 	};
 
 	t_prob nodeLoglik(t_ind nnode, t_prob *pSamples, int& nsamples, t_ind *pars, int numPars) {
@@ -319,7 +329,7 @@ public:
 		ncount = 0;
 		for (k = 0; k < nsamples; k++) {
 			listind = 0;
-			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, m_pProbVect, -1, -1, 1, listind, 1);			
+			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, listind, m_pProbVect, -1, -1, 1, 1);			
 			svalid = 1;
 			for(i = 0; i < nProbSize; i++)
 				if(m_pProbVect[i] < 0) /* NA */ {
@@ -351,7 +361,7 @@ public:
 		return(loglik);
 	}
 
-	t_prob nodeLoglikKL(t_ind nnode, t_prob *pSamples, int& nsamples, t_ind *pars, int numPars, int *pClasses) {
+	t_prob nodeLoglikKL(t_ind nnode, t_prob *pSamples, int& nsamples, t_ind *pars, int numPars, int *pClasses, int bUsePearson = 0) {
 		int i, k, nProbSize, svalid, listind, nodecats, ncount;
 		/* pSamples have categories in the range [1, n_cats] */
 		t_prob loglik, psum, *prob2, psum2;
@@ -367,7 +377,7 @@ public:
 		ncount = 0;
 		for (k = 0; k < nsamples; k++) {
 			listind = 0;
-			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, m_pProbVect, -1, -1, 1, listind, 1);			
+			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, listind, m_pProbVect, -1, -1, 1, 1);			
 			svalid = 1;
 			for(i = 0; i < nProbSize; i++)
 				if(m_pProbVect[i] < 0) /* NA */ {
@@ -392,10 +402,20 @@ public:
 			for (i = 0; i < nodecats; i++)
 				psum2 += prob2[k + i];
 			if (psum > 0 && psum2 > 0) {
-				psum = psum2 / psum;
 				for (i = 0; i < nodecats; i++) 
-					if(m_prob[k + i] > 0 && prob2[k + i] > 0)
-						loglik += m_prob[k + i] * log(m_prob[k + i] * psum / prob2[k + i]);
+					prob2[k + i] /= psum2;
+				if(bUsePearson) {
+					for (i = 0; i < nodecats; i++) 
+						if(prob2[k + i] > 0) {
+							psum2 = m_prob[k + i]/psum - prob2[k + i];
+							loglik += psum * psum * psum2 * psum2 / m_prob[k + i];
+						}
+				}
+				else {
+					for (i = 0; i < nodecats; i++) 
+						if(m_prob[k + i] > 0 && prob2[k + i] > 0)
+							loglik += m_prob[k + i] * log(m_prob[k + i] / (psum*prob2[k + i]));
+				}
 			}
 			k += nodecats;
 		}
@@ -450,11 +470,9 @@ public:
 				maxCategories = m_pNodeNumCats[i];
 
 #ifdef DISCRETE_SAMPLE
-//printf("DAGD_SEARCH_DC\n");
 		t_sample *pSamples = (t_sample*)pestim->m_pSamples;
 		t_sample *pSubSamples;
 #else
-//printf("DAGP_SEARCH_DC\n");
 		int nProbVect;
 		t_prob *pSamples = (t_prob*)pestim->m_pSamples;
 		t_prob *pSubSamples;
@@ -479,7 +497,7 @@ public:
 		m_probSize = maxCategories;
 		for(i = 0; i < n_maxpars; i++)
 			m_probSize *= maxCategories;
-//printf("m_probSize = %d, maxCategories=%d\n", m_probSize, maxCategories);
+
 		m_prob = (t_prob*)CATNET_MALLOC(m_probSize*sizeof(t_prob));
 
 		nodecomplx = (maxCategories-1);
@@ -487,8 +505,6 @@ public:
 			nodecomplx *= maxCategories;
 		if(maxComplexity > numNodes*nodecomplx)
 			maxComplexity = numNodes*nodecomplx;
-
-//printf("DAG_LIST::search: n_maxpars=%d, numNodes=%d, nodecomplx=%d, ndiffcats=%d\n", n_maxpars, numNodes, nodecomplx, ndiffcats);
 
 		parset = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
 		idparset = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
@@ -535,7 +551,6 @@ public:
 				nd = 1; for(j = 0; j < ncomb; j++) nd *= ndiffcats;
 				ndiffpars += nd;
 			}
-//printf("ndiffpars=%d\n", ndiffpars);
 
 			m_dagPars = new DAG_PARS<t_prob>(numNodes, ndiffpars);
 			if(!m_dagPars) CATNET_MEM_ERR();
@@ -564,7 +579,6 @@ public:
 						ndiffpars += nd;
 					}
 				}
-//printf("node=%d, ndiffpars=%d\n", nnode, ndiffpars);
 
 				m_numParSlots[nnode] = ndiffpars;
 				m_parSlots[nnode] = (t_ind*)CATNET_MALLOC(ndiffpars*n_maxpars*sizeof(t_ind));
@@ -628,7 +642,6 @@ public:
 				for(k = fixparsetsize; k < n_maxpars; k++)
 					m_parSlots[nnode][nd*n_maxpars+k] = -1;
 
-//printf("node=%d, ndiffpars=%d, ndiffcats=%d, nd=%d\n", nnode, ndiffpars, ndiffcats, nd);
 				// calculate the log-likelihood
 				if(perturbations) {
 					numSubSamples = 0;
@@ -644,14 +657,14 @@ public:
 						}
 					}
 					if(pClasses)
-						m_parLogliks[nnode][nd] = nodeLoglikKL(nnode, pSubSamples, numSubSamples, fixparset, fixparsetsize, pSubClasses);
+						m_parLogliks[nnode][nd] = nodeLoglikKL(nnode, pSubSamples, numSubSamples, fixparset, fixparsetsize, pSubClasses, pestim->m_klmode==1);
 					else
 						m_parLogliks[nnode][nd] = nodeLoglik(nnode, pSubSamples, numSubSamples, fixparset, fixparsetsize);
 				}
 				else {
 					numSubSamples = numSamples;
 					if(pClasses)
-						m_parLogliks[nnode][nd] = nodeLoglikKL(nnode, pSamples, numSubSamples, fixparset, fixparsetsize, pClasses);
+						m_parLogliks[nnode][nd] = nodeLoglikKL(nnode, pSamples, numSubSamples, fixparset, fixparsetsize, pClasses, pestim->m_klmode==1);
 					else
 						m_parLogliks[nnode][nd] = nodeLoglik(nnode, pSamples, numSubSamples, fixparset, fixparsetsize);
 				}
@@ -664,12 +677,8 @@ public:
 			}
 		} /* m_numNodes != numNodes */
 
-//printf("m_pNodeNumCats = ");
-//for(nnode = 0; nnode < numNodes; nnode++) 
-//printf(" %d", m_pNodeNumCats[nnode]);
-//printf("\n");
 		/* main loop of consequential non-empty-parenthood-node additions */
-		for(nnode = 1; nnode < numNodes; nnode++) {
+		for(nnode = 0/*1*/; nnode < numNodes; nnode++) {
 
 			if(_wait_stop_event(4/*millisecs*/) == 0) {
 				if(becho)
@@ -677,17 +686,16 @@ public:
 				break;
 			}
 
-			if(becho) {
-				Rprintf("processing node %d\n", nnode+1);
-				Rprintf("    [#parents][#combinations] = ");
-			}
-
-//printf("node=%d, ndiffpars=%d\n", nnode, m_numParSlots[nnode]);
-
 			fixparsetsize = 0;
 			parsetsize = 0;
-			for(j = 0; j < nnode; j++) {
+			for(j = 0; j < numNodes/*nnode*/; j++) {
+				if(j == nnode)
+					continue;
+				if((!parentsPool || !parentsPool[nnode]) && j > nnode)
+					continue;
 				ballow = 1;
+				if(parentsPool && !parentsPool[nnode])
+					ballow = 0;
 				if(parentsPool && parentsPool[nnode]) {
 					ballow = 0;
 					for(k = 0; k < pestim->m_maxParentsPool; k++) {
@@ -697,8 +705,6 @@ public:
 							ballow = 1;
 					}
 				}
-				if(parentsPool && !parentsPool[nnode])
-					ballow = 0;
 				bfixallow = 0;
 				if(fixedParentsPool && fixedParentsPool[nnode]) {
 					for(k = 0; k < pestim->m_maxParentsPool; k++) {
@@ -732,6 +738,11 @@ public:
 				maxpars = n_maxpars;
 			}
 
+			if(becho) {
+				Rprintf("processing node %d\n", nnode+1);
+				Rprintf("    [#parents][#combinations] = ");
+			}
+
 			/* make a copy of the current dag list */
 			pCurDagList = 0;
 			pCurDag = pCurDagList;
@@ -745,7 +756,6 @@ public:
 					pCurDagList = pNewDag;
 				pDagPars = pDagPars->next;
 			}
-//printf("numDAGS = %d\n", i);
 
 			for(d = fixparsetsize + 1; d <= maxpars; d++) {
 
@@ -827,14 +837,14 @@ public:
 								}
 							}
 							if(pClasses)
-								fLogLik = nodeLoglikKL(nnode, pSubSamples, numSubSamples, pcomblist[i], d, pSubClasses);
+								fLogLik = nodeLoglikKL(nnode, pSubSamples, numSubSamples, pcomblist[i], d, pSubClasses, pestim->m_klmode==1);
 							else
 								fLogLik = nodeLoglik(nnode, pSubSamples, numSubSamples, pcomblist[i], d);
 						}
 						else {
 							numSubSamples = numSamples;
 							if(pClasses)
-								fLogLik = nodeLoglikKL(nnode, pSamples, numSubSamples, pcomblist[i], d, pClasses);
+								fLogLik = nodeLoglikKL(nnode, pSamples, numSubSamples, pcomblist[i], d, pClasses, pestim->m_klmode==1);
 							else
 								fLogLik = nodeLoglik(nnode, pSamples, numSubSamples, pcomblist[i], d);
 						}

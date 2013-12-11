@@ -10,7 +10,7 @@
 \description{Compares two \code{catNetwork} objects by several criteria}
 
 \usage{
-cnCompare(object1, object2, extended = TRUE)
+cnCompare(object1, object2, extended = FALSE)
 }
 
 \arguments{
@@ -43,18 +43,21 @@ of indices which corresponding nodes have a common child.
 In case of extended comparison, the numbers of false positive and false negative Markov pairs are calculated.
 
 The \code{cnCompare} function returns an object with the following slots:  
-1) the number of true positive edges \code{TP}; 
-2) the number of false positive edges \code{FP}; 
-3) the number of false negative edges \code{FN}; 
-4) the F-score, which is the harmonic average of the specificity and sensitivity
-5) the number of different elements in the corresponding parent matrices \code{hamm}; 
-6) the total number of different elements between all powers of the parent matrices \code{hammexp};
+1) the number of true positive edges \code{tp}; 
+2) the number of false positive edges \code{fp}; 
+3) the number of false negative edges \code{fn}; 
+4) precision \code{pr}; 
+5) specificity \code{sp}; 
+6) sensitivity(recall) \code{sn}; 
+7) the F-score, which is the harmonic average of precision and recall
+8) the number of different elements in the corresponding parent matrices \code{hamm}; 
+9) the total number of different elements between all powers of the parent matrices \code{hammexp};
 
 Next three numbers identify the difference in the objects' skeletons (undirected graph structure)
 
-7) the number of true positive undirected edges \code{TP}; 
-8) the number of false positive undirected edges \code{FP}; 
-9) the number of false negative undirected edges \code{FN}; 
+7) the number of true positive undirected edges \code{tp}; 
+8) the number of false positive undirected edges \code{fp}; 
+9) the number of false negative undirected edges \code{fn}; 
 
 10) the number of false positive order pairs \code{order.fp}; 
 11) the number of false negative order pairs \code{order.fn}; 

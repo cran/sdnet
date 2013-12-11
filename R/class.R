@@ -142,7 +142,7 @@ setGeneric("cnCondKLdist",
            )
 
 setGeneric("cnCompare", 
-          function(object1, object2, extended = TRUE)
+          function(object1, object2, extended = FALSE)
            standardGeneric("cnCompare")
            )
 
@@ -224,6 +224,7 @@ setClass("catNetworkDistance",
                         tp = "numeric",
                         fp = "numeric",
                         fn = "numeric",
+                        pr = "numeric",
                         sp = "numeric",
                         sn = "numeric",
                         fscore = "numeric",
@@ -250,6 +251,7 @@ setClass("catNetworkEvaluate",
                         tp = "vector",
                         fp = "vector",
                         fn = "vector",
+                        pr = "vector",
                         sp = "vector",
                         sn = "vector",
                         fscore = "vector",
@@ -308,6 +310,11 @@ setClass("dagEvaluate",
 setGeneric("cnCatnetFromDagEvaluate", 
           function(object, index=1)
            standardGeneric("cnCatnetFromDagEvaluate")
+           )
+
+setGeneric("cnFindBnkl", 
+          function(object, factor=NULL)
+           standardGeneric("cnFindBnkl")
            )
 
 #########################################################################

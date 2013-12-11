@@ -311,13 +311,12 @@ sdnEvaluate <- function(train, test, ncats = 3, nodeCats = NULL, std=FALSE) {
   
   pl1 <- -sapply(1:net1@numnodes, function(j) sum(bnet@probs[[j]]*log(net1@probs[[j]]/bnet@probs[[j]])))
   pl1 <- 2*(n1+n2)*(n1/n2)*pl1
-  pvals <- 1 - pchisq(pl1, ncats-1)
-  ind <- order(pvals, decreasing=FALSE)
-  hc <- sapply(1:N, function(i) sqrt(N)*(i/N-pvals[ind[i]])/sqrt((i/N)*(1-i/N)))
-  pind <- which(pvals > 1/N & !is.nan(hc))
-  k <- pind[which(hc[pind]==max(hc[pind]))[1]]	
-  if(k<2) k <- 2
-  ind <- ind[1:k]
+  ind <- order(pl1, decreasing = TRUE)
+  hc <- sapply(1:length(pl1), function(k) sum(pl1[ind[1:k]]) - 0.5*log(n1+n2)*2*k)
+  kmax <- which(hc==max(hc[!is.nan(hc)]))[1]
+  hc <- hc[1:kmax]
+  if(is.na(kmax) || kmax<2) kmax <- 2
+  ind <- ind[1:kmax]
   rm(bnet)
   
   bres1 <- NULL
@@ -326,8 +325,6 @@ sdnEvaluate <- function(train, test, ncats = 3, nodeCats = NULL, std=FALSE) {
   
   for(k in 1:ncol(pmdata)) {
     dd <- t(matrix(pmdata[,k], nrow=ncats))
-    ##pl1 <- sapply(ind, function(j) log(sum(dd[j,]*net1@probs[[j]])))
-    ##pl2 <- sapply(ind, function(j) log(sum(dd[j,]*net2@probs[[j]])))
     pl1 <- sapply(ind, function(j) sum(net1@probs[[j]]*log(dd[j,]/net1@probs[[j]])))
     pl2 <- sapply(ind, function(j) sum(net2@probs[[j]]*log(dd[j,]/net2@probs[[j]])))
     pdl <- pl2-pl1

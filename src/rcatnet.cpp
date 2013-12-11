@@ -64,7 +64,6 @@ RCATNET_CLASS::RCATNET_CLASS(SEXP cnet) {
 	m_maxParents = INTEGER_POINTER(pint)[0];
 	pint = GET_SLOT(cnet, install("maxcats"));
 	m_maxCategories = INTEGER_POINTER(pint)[0];
-
 	pint = GET_SLOT(cnet, install("complx"));
 	m_complexity = INTEGER_POINTER(pint)[0];
 	pint = GET_SLOT(cnet, install("loglik"));
@@ -263,9 +262,9 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 	UNPROTECT(1);
 
 	PROTECT(pint = NEW_INTEGER(m_numNodes));
-	INTEGER_POINTER(pint)[0] = m_numNodes;
 	for(node = 0; node < m_numNodes; node++) {
-		INTEGER_POINTER(pint)[node] = m_pProbLists[node]->sampleSize;
+		if(m_pProbLists[node])
+			INTEGER_POINTER(pint)[node] = m_pProbLists[node]->sampleSize;
 	}
 	SET_SLOT(cnet, install("nodeSampleSizes"), pint);
 	UNPROTECT(1);
@@ -283,10 +282,6 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	const char *pstr;
 	SEXP rslot, rnodes, plist, poldlist, ppars, pcats, poldcats, rNodeNames, pint;
 
-	PROTECT(rDagIndex = AS_INTEGER(rDagIndex));
-	nIndex = INTEGER_POINTER(rDagIndex)[0] - 1;
-	UNPROTECT(1);
-
 	if(!isS4(rDagEval))
 		CATNET_PARAM_ERR();
 	rslot = GET_SLOT(rDagEval, install("numDags"));
@@ -295,6 +290,10 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 
 	PROTECT(rslot = AS_INTEGER(rslot));
 	numDags = INTEGER_POINTER(rslot)[0];
+	UNPROTECT(1);
+
+	PROTECT(rDagIndex = AS_INTEGER(rDagIndex));
+	nIndex = INTEGER_POINTER(rDagIndex)[0] - 1;
 	UNPROTECT(1);
 	if(numDags < 1 || nIndex < 0 || nIndex >= numDags)
 		CATNET_PARAM_ERR();

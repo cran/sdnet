@@ -12,7 +12,7 @@ cnSearchOrder(data, pert=NULL,
 	maxParentSet=0, parentSizes=NULL, maxComplexity=0, 
 	nodeOrder=NULL, 
 	nodeCats=NULL, parentsPool=NULL, fixedParents=NULL, edgeProb=NULL,
-	echo=FALSE, softmode=FALSE, dagsOnly = FALSE, classes = NULL, clsdist="kl")
+	echo=FALSE, softmode=FALSE, dagsOnly = FALSE, classes = NULL, clsdist=1)
 }
 
 \arguments{
@@ -30,7 +30,7 @@ cnSearchOrder(data, pert=NULL,
 \item{softmode}{a \code{logical}, turns on/off the soft quantization mode}
 \item{dagsOnly}{a \code{logical}, selects between catNetwork and DAG only search}
 \item{classes}{a binary matrix with the dimensions of \code{data} that assigns a class to each node-observation}
-\item{clsdist}{class separation distance function, currently `kl' and `chisq' are supported}
+\item{clsdist}{class separation distance function, currently 1(`chisq') and 2(`kl') are supported}
 }
 
 \details{

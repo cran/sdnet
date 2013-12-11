@@ -337,7 +337,7 @@ SEXP searchOrder(SEXP rSamples, SEXP rPerturbations,
 	SEXP res = R_NilValue;
 	if(bDagOrCatnet) {
 		RDagSearch* pengine = new RDagSearch;
-		res = pengine -> estimate(rSamples, rPerturbations, rClasses,  
+		res = pengine -> estimate(rSamples, rPerturbations, rClasses, rClsdist,   
 						rMaxParents, rParentSizes, 
 						rMaxComplexity, rOrder, rNodeCats, 
 				                rParentsPool, rFixedParentsPool, rMatEdgeLiks, 
@@ -346,7 +346,7 @@ SEXP searchOrder(SEXP rSamples, SEXP rPerturbations,
 	}
 	else if(isInteger(rSamples)) {
 		RCatnetSearchD * pengine = new RCatnetSearchD;
-		res = pengine -> estimate(rSamples, rPerturbations, rClasses,  
+		res = pengine -> estimate(rSamples, rPerturbations, rClasses, rClsdist,   
 						rMaxParents, rParentSizes, 
 						rMaxComplexity, rOrder, rNodeCats, 
 				                rParentsPool, rFixedParentsPool, rMatEdgeLiks, 
@@ -355,7 +355,7 @@ SEXP searchOrder(SEXP rSamples, SEXP rPerturbations,
 	}
 	else {
 		RCatnetSearchP * pengine = new RCatnetSearchP;
-		res = pengine -> estimate(rSamples, rPerturbations, rClasses,  
+		res = pengine -> estimate(rSamples, rPerturbations, rClasses, rClsdist, 
 						rMaxParents, rParentSizes, 
 						rMaxComplexity, rOrder, rNodeCats, 
 				                rParentsPool, rFixedParentsPool, rMatEdgeLiks, 
@@ -507,6 +507,7 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 	}
 
 	if(isInteger(rSamples)) {
+
 		PROTECT(cnet);
 		RCatnet *rnet = new RCatnet(cnet);
 		UNPROTECT(1);
@@ -572,7 +573,15 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 		dim = GET_DIM(rSamples);
 		numsamples = INTEGER(dim)[1];
 		nlines = INTEGER(dim)[0];
-//Rprintf("numsamples = %d, nlines = %d\n", numsamples, nlines);
+
+		int catline = 0;
+		for(j = 0; j < rnet->numNodes(); j++) 
+			catline += rnet->numCategories()[j];
+		if(catline != INTEGER(dim)[0]) {
+			Rprintf("data matrix should have %d  number of rows\n", catline);
+			error("wrong data");
+		}
+
 		psubSamples = 0;
 		if(!isNull(rPerturbations))
 			psubSamples = (double*)CATNET_MALLOC(nlines*numsamples*sizeof(double));
@@ -675,6 +684,15 @@ SEXP catnetLoglik(SEXP cnet, SEXP rSamples, SEXP rPerturbations, SEXP rBySample)
 		double * pSamples = REAL(rSamples);
 		dim = GET_DIM(rSamples);
 		numsamples = INTEGER(dim)[1];
+
+		int catline = 0;
+		for(j = 0; j < rnet->numNodes(); j++) 
+			catline += rnet->numCategories()[j];
+		if(catline != INTEGER(dim)[0]) {
+			Rprintf("data matrix should have %d  number of rows\n", catline);
+			error("wrong data");
+		}
+
 		if(bysample)
 			floglik = rnet->CATNETP<double>::bySampleLoglikVector((double*)pSamples, numsamples, pPerturbations);
 		else
@@ -734,8 +752,8 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 		error("Node should be an integer");
 
 	klmode = 0;
-	PROTECT(rKlmode = AS_LOGICAL(rKlmode));
-	klmode = LOGICAL(rKlmode)[0];
+	PROTECT(rKlmode = AS_INTEGER(rKlmode));
+	klmode = INTEGER_POINTER(rKlmode)[0];
 	UNPROTECT(1);
 
 	////////////////////////////////////////
@@ -794,12 +812,12 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 						numsubsamples++;
 					}
 				}
-				floglik = rnet->CATNETD<double>::sampleNodeLoglik(nnode, psubSamples, numsubsamples);
+				floglik = rnet->CATNETD<double>::sampleNodeLoglik(nnode, psubSamples, numsubsamples, klmode);
 				UNPROTECT(1);
 				CATNET_FREE(psubSamples);
 			}
 			else {
-				floglik = rnet->CATNETD<double>::sampleNodeLoglik(nnode, pSamples, numsamples);
+				floglik = rnet->CATNETD<double>::sampleNodeLoglik(nnode, pSamples, numsamples, klmode);
 			}
 
 			pvec[i] = R_NegInf;
@@ -821,6 +839,14 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 		dim = GET_DIM(rSamples);
 		numsamples = INTEGER(dim)[1];
 		nlines = INTEGER(dim)[0];
+
+		int catline = 0;
+		for(j = 0; j < rnet->numNodes(); j++) 
+			catline += rnet->numCategories()[j];
+		if(catline != nlines) {
+			Rprintf("data matrix should have %d  number of rows\n", catline);
+			error("wrong data");
+		}
 
 		for(i = 0; i < nnodes; i++) { 
 			nnode = pnodes[i] - 1;

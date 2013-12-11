@@ -46,8 +46,8 @@ protected:
 
 protected:
 	void _unlist_parent_probs(int nnode, int *pnodepars, int nodepars, t_prob *psample, 
-				t_prob *plist = 0, int parid = -1, int parcat = -1, 
-				t_prob ptemp = 1, int &listind = 0, t_prob fact = 0) {
+				int &listind, t_prob *plist = 0, int parid = -1, int parcat = -1, 
+				t_prob ptemp = 1, t_prob fact = 0) {
 		int i, ncat, sind;
 		if(!plist || listind < 0)
 			return;
@@ -93,7 +93,7 @@ protected:
 			sind += m_numCategories[i];
 
 		for(parcat = 0; parcat < m_numCategories[pnodepars[parid]]; parcat++)
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psample, plist, parid, parcat, ptemp*psample[sind+parcat], listind, fact);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psample, listind, plist, parid, parcat, ptemp*psample[sind+parcat], fact);
 	};
 
 public:
@@ -126,7 +126,7 @@ public:
 		for (j = 0; j < nsamples; j++) {
 
 			listind = 0;
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, plist, -1, -1, 1, listind, 1);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, listind, plist, -1, -1, 1, 1);
 			floglik = 0;
 
 			if(klmode) {
@@ -165,7 +165,7 @@ public:
 	t_prob sampleNodeLoglik(int nnode, t_prob *psamples, int nsamples, int klmode = 0) {
 		int i, j, ncats, nline, listind;
 		/* psamples have categories in the range [1, m_maxCategories] */
-		t_prob *pnodeprob, floglik, loglik, *plist;
+		t_prob *pnodeprob, floglik, loglik, *plist, faux;
 		int nodepars, *pnodepars;
 
 		if(!psamples || nsamples < 1 || nnode < 0 || nnode >= m_numNodes)
@@ -190,35 +190,46 @@ public:
 		loglik = 0;
 		for (j = 0; j < nsamples; j++) {
 			listind = 0;
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, plist, -1, -1, 1, listind, 1);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, listind, plist, -1, -1, 1, 1);
 
 			floglik = 0;
-			if(klmode) {
-
-			for(i = 0; i < ncats; i++) {
-				if(pnodeprob[i] > 0 && plist[i] > 0) 
-					/* use the KL distance instead */
-					floglik += pnodeprob[i]*(t_prob)log(plist[i]/pnodeprob[i]);
-				else if(pnodeprob[i] > 0) {
-					floglik = (t_prob)-FLT_MAX;
-					break;
+			if(klmode == 1) {
+				/* Pearson */ 
+				for(i = 0; i < ncats; i++) {
+					if(plist[i] > 0) {
+						/* use the KL distance instead */
+						faux = (plist[i] - pnodeprob[i]);
+						floglik -= faux*faux / (t_prob)plist[i];
+					}
+					else {
+						floglik = (t_prob)-FLT_MAX;
+						break;
+					}
 				}
+				loglik += floglik;
 			}
-			loglik += floglik;
-
+			else if(klmode == 2) {
+				/* KL */ 
+				for(i = 0; i < ncats; i++) {
+					if(pnodeprob[i] > 0 && plist[i] > 0) 
+						/* use the KL distance instead */
+						floglik += pnodeprob[i]*(t_prob)log(plist[i]/pnodeprob[i]);
+					else if(pnodeprob[i] > 0) {
+						floglik = (t_prob)-FLT_MAX;
+						break;
+					}
+				}
+				loglik += floglik;
 			}
 			else {
-		
-			for(i = 0; i < ncats; i++) {
-				/* soft mode log-likelihood */
-				floglik += plist[i]*pnodeprob[i];
-			}
-
-			if(floglik > 0) 
-				loglik += (t_prob)log((double)floglik);
-			else
-				loglik = (t_prob)-FLT_MAX;
-
+				for(i = 0; i < ncats; i++) {
+					/* soft mode log-likelihood */
+					floglik += plist[i]*pnodeprob[i];
+				}
+				if(floglik > 0) 
+					loglik += (t_prob)log((double)floglik);
+				else
+					loglik = (t_prob)-FLT_MAX;
 			} // klmode
 		}
 		CATNET_FREE(plist);
@@ -268,7 +279,7 @@ public:
 				if(pert && pert[j * m_numNodes + nnode])
 					continue; 
 				listind = 0;
-				_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, plist, -1, -1, 1, listind, 1);
+				_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, listind, plist, -1, -1, 1, 1);
 				
 				if(klmode) {
 				
@@ -343,7 +354,7 @@ public:
 				if(pert && pert[j * m_numNodes + nnode])
 					continue; 
 				listind = 0;
-				_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, plist, -1, -1, 1, listind, 1);
+				_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, listind, plist, -1, -1, 1, 1);
 
 				if(klmode) {
 
@@ -411,7 +422,7 @@ public:
 			nline += m_numCategories[j];
 		for (j = 0; j < nsamples; j++) {
 			listind = 0;
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, plist, -1, -1, 1, listind, 1);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, listind, plist, -1, -1, 1, 1);
 			for(i = 0; i < ncats; i++) 
 				pnodeprob[i] += plist[i];
 		}
@@ -439,7 +450,7 @@ public:
 	}
 
 	// sets sample conditional probability and returns its log-likelihood
-	t_prob setNodeSampleProbKL(int nnode, t_prob *psamples, int nsamples, int *pClasses, int bNormalize = 0) {
+	t_prob setNodeSampleProbKL(int nnode, t_prob *psamples, int nsamples, int *pClasses, int bNormalize = 0, int bUsePearson = 0) {
 		int i, j, nline, *pnodepars, nodepars, ncats, listind, ncount;
 		/* psamples have categories in the range [1, m_maxCategories] */
 		t_prob *pnodeprob, *plist, floglik;
@@ -470,10 +481,8 @@ public:
 		pnodeprob = m_pProbLists[nnode]->pProbs;		
 		ncount = 0;
 		for (j = 0; j < nsamples; j++) {
-			if(pClasses[j] != 0)
-				continue;
 			listind = 0;
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, plist, -1, -1, 1, listind, 1);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, listind, plist, -1, -1, 1, 1);
 			for(i = 0; i < ncats; i++) 
 				pnodeprob[i] += plist[i];
 			ncount++;
@@ -484,8 +493,10 @@ public:
 		pPriorProb->set_zero();
 		pnodeprob = pPriorProb->pProbs;		
 		for (j = 0; j < nsamples; j++) {
+			if(pClasses[j] != 0)
+				continue;
 			listind = 0;
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, plist, -1, -1, 1, listind, 1);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psamples+nline*j, listind, plist, -1, -1, 1, 1);
 			for(i = 0; i < ncats; i++) 
 				pnodeprob[i] += plist[i];
 		}
@@ -494,8 +505,8 @@ public:
 
 		CATNET_FREE(plist);
 
-		pPriorProb->normalize();
-		m_pProbLists[nnode]->setPrior(pPriorProb);
+		//pPriorProb->normalize();
+		m_pProbLists[nnode]->setPrior(pPriorProb, bUsePearson);
 
 		/* at this point m_pProbLists[nnode] has counts not probabilities 
 		  find m_pProbLists[nnode]->loglik */
@@ -513,7 +524,6 @@ public:
 		m_loglik = 0;
 
 		delete pPriorProb;
-
 		return floglik;
 	}
 

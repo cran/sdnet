@@ -50,6 +50,7 @@ struct SEARCH_PARAMETERS {
 	int m_echo;
 	MUTEX *m_pCacheMutex;
 	int m_seed;
+	int m_klmode;
 
 	void *m_pCaller;
 
@@ -57,7 +58,7 @@ struct SEARCH_PARAMETERS {
 			int hasCats = 0, int hasParentSizes = 0, int hasPerturbations = 0, 
 			int hasParentsPool = 0, int hasFixedParentsPool = 0, 
 			int hasEdgeLiks = 0, int maxParentsPool=0, 
-			MUTEX *pCacheMutex = 0, void *pCaller = 0, int 	sampleline = 0, int nSeed = 0, int hasClasses = 0) {
+			MUTEX *pCacheMutex = 0, void *pCaller = 0, int 	sampleline = 0, int nSeed = 0, int hasClasses = 0, int klmode = 1) {
 		int i;
 		m_numNodes = numNodes;
 		m_numSamples = numSamples;
@@ -68,6 +69,8 @@ struct SEARCH_PARAMETERS {
 		m_echo = echo;
 		m_pCacheMutex = pCacheMutex;
 		m_pCaller = pCaller;
+
+		m_klmode = klmode;
 
 		m_pParentSizes = 0;
 		if(hasParentSizes) { 

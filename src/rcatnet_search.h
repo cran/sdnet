@@ -48,7 +48,7 @@ public:
 	RCatnetSearchD();
 	~RCatnetSearchD();
 
-	SEXP estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, 
+	SEXP estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEXP rClsdist, 
 		SEXP rMaxParents, SEXP rParentSizes, SEXP rMaxComplexity, SEXP rOrder, SEXP rNodeCats, 
 		SEXP rParentsPool, SEXP rFixedParentsPool, SEXP rMatEdgeLiks, SEXP rUseCache, SEXP rEcho);
 
@@ -64,7 +64,7 @@ public:
 	RCatnetSearchP();
 	~RCatnetSearchP();
 
-	SEXP estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, 
+	SEXP estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEXP rClsdist, 
 		SEXP rMaxParents, SEXP rParentSizes, SEXP rMaxComplexity, SEXP rOrder, SEXP rNodeCats, 
 		SEXP rParentsPool, SEXP rFixedParentsPool, SEXP rMatEdgeLiks, SEXP rUseCache, SEXP rEcho);
 
@@ -81,7 +81,7 @@ public:
 	RDagSearch();
 	~RDagSearch();
 
-	SEXP estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, 
+	SEXP estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEXP rClsdist, 
 		SEXP rMaxParents, SEXP rParentSizes, SEXP rMaxComplexity, SEXP rOrder, SEXP rNodeCats, 
 		SEXP rParentsPool, SEXP rFixedParentsPool, SEXP rMatEdgeLiks, SEXP rUseCache, SEXP rEcho, int bIntSample);
 

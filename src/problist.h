@@ -39,6 +39,7 @@ struct PROB_LIST {
 	t_prob priorlik;
 	int sampleSize;
 	PROB_LIST<t_prob> *prior;
+	int usePearson;
 
 	void reset() {
 		if (numParCats)
@@ -57,6 +58,7 @@ struct PROB_LIST {
 		priorlik = 0;
 		sampleSize = 0;
 		prior = 0;
+		usePearson = 0;
 	}
 
 
@@ -195,19 +197,17 @@ struct PROB_LIST {
 		}
 	}
 
-	void setPrior(PROB_LIST<t_prob> *pprior) {
+	void setPrior(PROB_LIST<t_prob> *pprior, int bUsePearson) {
 		prior = pprior;
-//printf("setPrior %p, %p\n", prior, prior->pProbs);
+		usePearson = bUsePearson;
 	}
 
 	t_prob loglikelihood() {
 		int i, k;
-		t_prob pp, ppp;
+		t_prob pp, ppp, faux;
 		loglik = 0;
 		if(prior && prior->pProbs) {
-//printf("KL: ");
 			k = 0;
-			/* KL-distance w.r.t. prior */
 			while (k < nProbSize) {
 				pp = 0;
 				for (i = 0; i < numCats; i++)
@@ -219,11 +219,23 @@ struct PROB_LIST {
 					k += numCats;
 					continue;
 				}
-				pp = ppp / pp;
-				for (i = 0; i < numCats; i++) {
-					if(pProbs[k + i] <= 0 || prior->pProbs[k + i] <= 0)
-						continue;
-					loglik += pProbs[k + i] * log(pProbs[k + i] * pp / prior->pProbs[k + i]);
+				if(usePearson) { 
+					for (i = 0; i < numCats; i++) {
+						if(prior->pProbs[k + i] <= 0)
+							continue;
+						faux = pProbs[k + i]/pp - prior->pProbs[k + i]/ppp;
+						/* + : max diff; - : min diff */
+						loglik += pp * pp * faux * faux / pProbs[k + i]; 
+					}
+				} 
+				else { 
+					/* KL-distance w.r.t. prior */
+					pp = ppp / pp;
+					for (i = 0; i < numCats; i++) {
+						if(pProbs[k + i] <= 0 || prior->pProbs[k + i] <= 0)
+							continue;
+						loglik += pProbs[k + i] * log(pProbs[k + i] * pp / prior->pProbs[k + i]);
+					}
 				}
 				k += numCats;
 			}
