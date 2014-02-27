@@ -139,7 +139,7 @@ cnNew <- function(nodes, cats, pars, probs = NULL, p.delta1=0.01, p.delta2=0.01,
   object@maxpars <- as.integer(maxpars)
   object@probs <- vector("list", length(nodes))
 
-  object@nodecomplx <- sapply(1:object@numnodes, function(x) nodecomplx(object, x)) 
+  object@nodecomplx <- sapply(1:object@numnodes, function(x) nodeComplexity(object, x)) 
   object@complx <- as.integer(sum(object@nodecomplx)) 
 
   if(!dagonly) { 
@@ -253,7 +253,7 @@ genRandomCatnet <- function(object, numnodes, maxpars, maxcats, defaultprob, p.d
   object@maxcats <- as.integer(maxcats) 
   object@probs <- probs 
  
-  object@nodecomplx <- sapply(1:as.integer(numnodes), function(x) nodecomplx(object, x)) 
+  object@nodecomplx <- sapply(1:as.integer(numnodes), function(x) nodeComplexity(object, x)) 
   object@complx <- as.integer(sum(object@nodecomplx)) 
    
   object@loglik <- 0 
@@ -509,7 +509,7 @@ validCatNetwork <- function(obj, quietly=FALSE) {
   return(res)    
 }   
  
-nodecomplx <- function(object, nnode) { 
+nodeComplexity <- function(object, nnode) { 
   ll <- sapply(object@pars[[nnode]], function(i) length(object@cats[[i]])) 
   if(length(ll)>0) 
     return(prod(ll)*(length(object@cats[[nnode]])-1)) 
@@ -553,16 +553,16 @@ condNonUnifComplexity <- function(idroot, ppars, pcatlist, probs, idx) {
 
 setMethod("cnComplexity", signature("catNetwork"), function(object, node=NULL, include.unif=TRUE) {
   if(is.null(node)) { 
-    pc <- sapply(1:object@numnodes, function(x) nodecomplx(object, x)) 
+    pc <- sapply(1:object@numnodes, function(x) nodeComplexity(object, x)) 
     return(as.integer(sum(pc))) 
   }
   if(is.character(node))
-    node <- which(object@nodes == node)
+    node <- sapply(node, function(str) which(object@nodes == str))
   cmplx <- 0
   if(!is.numeric(node)) { 
     pc <- sapply(1:object@numnodes, function(x) {
       if(include.unif)
-        return(nodecomplx(object, x))
+        return(nodeComplexity(object, x))
       else {
         idx <- 1:length(object@pars[[x]])
         return(condNonUnifComplexity(x,object@pars[[x]], object@cats, object@probs[[x]], idx))
@@ -572,14 +572,16 @@ setMethod("cnComplexity", signature("catNetwork"), function(object, node=NULL, i
   } 
   else {
     if(include.unif)
-      cmplx <- as.integer(nodecomplx(object, as.integer(node)))
+      cmplx <- sapply(node, function(i) as.integer(nodeComplexity(object, as.integer(i))))
     else {
-      idx <- 1:length(object@pars[[node]])
-      cmplx <- condNonUnifComplexity(node,object@pars[[node]], object@cats, object@probs[[node]], idx)
+      cmplx <- sapply(node, function(i) {
+        idx <- 1:length(object@pars[[i]])
+        condNonUnifComplexity(i,object@pars[[i]], object@cats, object@probs[[i]], idx)
+      })
     }
   }
   return(cmplx)
-})  
+}) 
 
 setMethod("cnSubNetwork", "catNetwork",  
 function(object, nodeIndices, indirectEdges = FALSE) { 
@@ -641,7 +643,7 @@ function(object, nodeIndices, indirectEdges = FALSE) {
   problist <- vector("list", numnodes)
   newnet@probs <- problist 
 
-  pc <- sapply(1:newnet@numnodes, function(x) nodecomplx(newnet, x)) 
+  pc <- sapply(1:newnet@numnodes, function(x) nodeComplexity(newnet, x)) 
   newnet@complx <- as.integer(sum(pc))
       
   return(newnet) 

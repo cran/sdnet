@@ -74,7 +74,7 @@ edges2catnet <- function(.Object, nodes, edges, maxcats=2, cats=NULL, probs=NULL
     #.Object@probs <- poutlist
   }
 
-  .Object@nodecomplx <- sapply(1:.Object@numnodes, function(x) nodecomplx(.Object, x))
+  .Object@nodecomplx <- sapply(1:.Object@numnodes, function(x) nodeComplexity(.Object, x))
   .Object@complx <- as.integer(sum(.Object@nodecomplx))
   
   .Object@loglik <- 0

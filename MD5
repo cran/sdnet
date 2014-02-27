@@ -1,4 +1,4 @@
-e97cee09a8e0d1b56039781a26436c82 *DESCRIPTION
+9c5786d4beacffa18887db84074252fe *DESCRIPTION
 86d1813fed03b798eaf7e2249f75fe36 *NAMESPACE
 a49ce18a144315503c2f888d1e51950f *R/bif.R
 c7c9f43c14f4754d9b68b9256b22e7b1 *R/categor.R
@@ -6,13 +6,13 @@ c79e1c7cf75238d22bfc013c21045af4 *R/chisq.R
 6f07b1324c6630bb5ca91dbdcd06c025 *R/class.R
 9e0ff3b6f1603971dcc6471acc390745 *R/cluster.R
 91cb05fc63fd673a26929671aedce6e4 *R/dags.R
-15be409fa1cfafe0e3c690114ebe78f4 *R/def.R
+349c8f6316df444afccb44f70eec299c *R/def.R
 a100ba59f374ae0d1d9fa861818c079c *R/dist.R
 48d06c2c87846596338961143a0ec45b *R/entropy.R
 cf2690f2b17006ecb54828ab67a2b513 *R/eval.R
 0f2eacf28864053264563f5f25691c87 *R/expres.r
-6f99c3c0c3f76d942b5989cc9abd1e74 *R/find.R
-6c9f150ab841c9761e542a0dfe5e4b45 *R/graph2catnet.R
+429a95513c5d0d4d6fc458d2508089c2 *R/find.R
+89177700c71a87f5266a9a428a1326c6 *R/graph2catnet.R
 b873032fa588fb5482b734a501a0d44b *R/histo.R
 45cc2920ed1a934ade6d9b57e29b012d *R/joint.prob.R
 ac17878b289c9caeb412106c6ee0e676 *R/loglik.R
@@ -79,7 +79,7 @@ eceb0a7e3ff3d19b813b06d0fdf6b4af *src/Makevars.win
 a788e809b4fa2d3d69c920160b3309f5 *src/cache.h
 661eb31705987b91833e44aa54c73d1e *src/catnet_base.h
 9f60a554ed51820421f5a054c3f04099 *src/catnet_entropy.cpp
-8ccd8aeef2e7b4e6d01e9f277d7f31da *src/catnet_quant.cpp
+a25e4ae8c9948a240a78addbb909d2db *src/catnet_quant.cpp
 809dc1883f3627302e24442e7e564c15 *src/catnet_rexport.cpp
 0ff6e5f83d11b28abd4b4b6c9e507fcb *src/catnet_rexport.h
 d1e936d5fa396ff92f866760d0945f49 *src/catnet_search.h

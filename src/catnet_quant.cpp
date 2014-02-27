@@ -116,12 +116,12 @@ inline void _gmm(double *pdata, double *pSampleWeights, int ndata, int numCats, 
 			pw[c] /= ndata;
 		}
 
-		//fsum = 0;
-		//for(c = 0; c < numCats; c++) 
-		//	fsum += psig[c];
-		//fsum /= numCats;
-		//for(c = 0; c < numCats; c++) 
-		//	psig[c] = fsum;
+		fsum = 0;
+		for(c = 0; c < numCats; c++) 
+			fsum += psig[c];
+		fsum /= numCats;
+		for(c = 0; c < numCats; c++) 
+			psig[c] = fsum;
 
 		fsum = 0;
 		for(c = 0; c < numCats; c++) {

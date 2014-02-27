@@ -95,21 +95,21 @@ setMethod("cnFind", "dagEvaluate",
             
             if(alpha==-2) {##AIC
               score <- sapply(nets, function(pnet) {                
-                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodecomplx(pnet, as.integer(node))))
+                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodeComplexity(pnet, as.integer(node))))
                 alpha.n <- 1/pnet@nodeSampleSizes
                 return(pnet@loglik - sum(alpha.n*cmplx))
               })
             }
             if(alpha==-1) {##BIC
               score <- sapply(nets, function(pnet) {                
-                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodecomplx(pnet, as.integer(node))))
+                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodeComplexity(pnet, as.integer(node))))
                 alpha.n <- 0.5*log(pnet@nodeSampleSizes)/pnet@nodeSampleSizes
                 return(pnet@loglik - sum(alpha.n*cmplx))
               })
             }
             if(alpha!=-1&&alpha!=-2) {
               score <- sapply(nets, function(pnet) {
-                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodecomplx(pnet, as.integer(node))))              
+                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodeComplexity(pnet, as.integer(node))))              
                 alpha.n <- factor*exp(-alpha*log(pnet@nodeSampleSizes))
                 return(pnet@loglik - sum(alpha.n*cmplx))
               })
@@ -145,21 +145,21 @@ setMethod("cnFind", "catNetworkEvaluate",
             }
             if(alpha==-2) {##AIC
               score <- sapply(object@nets, function(pnet) {                
-                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodecomplx(pnet, as.integer(node))))
+                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodeComplexity(pnet, as.integer(node))))
                 alpha.n <- 1/pnet@nodeSampleSizes
                 return((pnet@loglik - sum(alpha.n*cmplx))/pnet@numnodes)
               })
             }
             if(alpha==-1) {##BIC
               score <- sapply(object@nets, function(pnet) {                
-                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodecomplx(pnet, as.integer(node))))
+                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodeComplexity(pnet, as.integer(node))))
                 alpha.n <- 0.5*log(pnet@nodeSampleSizes)/pnet@nodeSampleSizes
                 return((pnet@loglik - sum(alpha.n*cmplx))/pnet@numnodes)
               })
             }
             if(alpha!=-1&&alpha!=-2) {
               score <- sapply(object@nets, function(pnet) {
-                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodecomplx(pnet, as.integer(node))))              
+                cmplx <- sapply(1:pnet@numnodes, function(node) as.integer(nodeComplexity(pnet, as.integer(node))))              
                 alpha.n <- factor*exp(-alpha*log(pnet@nodeSampleSizes))
                 return((pnet@loglik - sum(alpha.n*cmplx))/pnet@numnodes)
               })
