@@ -33,10 +33,10 @@ setMethod("show", "catNetworkEvaluate",
           function(object) {
             if(is(object, "catNetworkEvaluate"))
               str <- sprintf(
-" Number of nodes      = %d, 
- Sample size              = %d,
+" Number of nodes    = %d, 
+ Sample size        = %d,
  Number of networks = %d
- Processing time        = %.3f\n",                             
+ Processing time    = %.3f\n",                             
                   object@numnodes, 
                   object@numsamples,
                   length(object@nets),
@@ -50,9 +50,9 @@ setMethod("show", "dagEvaluate",
             if(is(object, "dagEvaluate"))
               str <- sprintf(
 " Number of nodes     = %d, 
- Sample size             = %d,
+ Sample size         = %d,
  Number of DAGs      = %d
- Processing time        = %.3f\n",                             
+ Processing time     = %.3f\n",                             
                   object@numnodes, 
                   object@numsamples,
                   object@numDags,

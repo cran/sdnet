@@ -79,7 +79,8 @@ void InitializeCache(int nslots, int ncachebits) {
 		nslots = 1;
 	g_ncache = nslots;
 	g_pcache = (CATNET_CACHE_EL<double>**)CATNET_MALLOC(g_ncache*sizeof(CATNET_CACHE_EL<double>*));
-	memset(g_pcache, 0, g_ncache*sizeof(CATNET_CACHE_EL<double>*));
+	if (g_pcache) 
+		memset(g_pcache, 0, g_ncache*sizeof(CATNET_CACHE_EL<double>*));
 	g_nCacheBits = ncachebits;
 }
 
@@ -123,10 +124,12 @@ void c_cache::setCacheParams(int numNodes, int maxParentSet, int *pRorder, int *
 	m_maxParentSet = maxParentSet;
 	if(!m_pRorder)
 		m_pRorder = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
-	memcpy(m_pRorder, pRorder, m_numNodes*sizeof(int));
+	if (m_pRorder)
+		memcpy(m_pRorder, pRorder, m_numNodes*sizeof(int));
 	if(!m_pRorderInverse)
 		m_pRorderInverse = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
-	memcpy(m_pRorderInverse, pRorderInverse, m_numNodes*sizeof(int));
+	if (m_pRorderInverse)
+		memcpy(m_pRorderInverse, pRorderInverse, m_numNodes*sizeof(int));
 	if(!m_parBuff1)
 		m_parBuff1 = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
 	if(!m_parBuff2)
@@ -147,24 +150,12 @@ int c_cache::getCachedProb(int *ppool, int poolsize, int node, int *parset, int 
 			return 0;
 		if(!g_pcache)
 			return 0;
-#ifdef DEBUG_INFO
-char str[256];
-sPRINTF(str,"getCachedProb node=%d, pool = ", node);Rprintf(str);
-for(i = 0; i < poolsize; i++) {
-	sPRINTF(str,"%d  ", ppool[i]);Rprintf(str);
-}Rprintf("\n");
-#endif
+
 		node = m_pRorder[node];
 		for(i = 0; i < poolsize; i++)
 			m_parBuff1[i] = m_pRorder[ppool[i]];
 		_quick_sort<int>(m_parBuff1, poolsize);
 
-#ifdef DEBUG_INFO
-sPRINTF(str,"    reordered node=%d, pool = ", node);Rprintf(str);
-for(i = 0; i < poolsize; i++) {
-	sPRINTF(str,"%d  ", m_parBuff1[i]); Rprintf(str);
-}Rprintf("\n");
-#endif
 		nlookup = 1;
 		for(i = 0; i < poolsize; i++) {
 			j = m_parBuff1[i] - 1;
@@ -177,10 +168,6 @@ for(i = 0; i < poolsize; i++) {
 		nlookup = (nlookup << g_nCacheBits) + node + m_numNodes*parsize;
 		while(nlookup >= g_ncache)
 			nlookup -= g_ncache;
-
-#ifdef DEBUG_INFO
-sPRINTF(str,"nlookup=%d\n", nlookup);Rprintf(str);
-#endif
 
 		pCacheEl = g_pcache[nlookup];
 		if(!pCacheEl) 
@@ -202,15 +189,6 @@ sPRINTF(str,"nlookup=%d\n", nlookup);Rprintf(str);
 		*probNode = *pCacheEl->pNodeProb;
 		*pflik = pCacheEl->fLogLik;
 
- //clock_t lt = clock();
- //Rprintf("%ld\n", lt);;
-
-#ifdef DEBUG_INFO
-Rprintf("\n    HIT, parset = ");
-for(i = 0; i < parsize; i++) {
-	sPRINTF(str,"%d  ", parset[i]);Rprintf(str);
-}Rprintf("\n");
-#endif
 		return 1;
 	}
 
@@ -256,18 +234,8 @@ int c_cache::setCachedProb(int *ppool, int poolsize, int node, int *parset, int 
 				g_nCacheBits++;
 				i <<= 1;
 			}
-#ifdef DEBUG_INFO
-sPRINTF(str,"nCacheBits = %d  ", g_nCacheBits); Rprintf(str);
-#endif
 			InitializeCache(nlookup, g_nCacheBits);
 		}
-
-#ifdef DEBUG_INFO
-sPRINTF(str,"setCachedProb node=%d, poolsize = %d, parsize = %d, pool = ", node, poolsize, parsize); Rprintf(str);
-for(i = 0; i < poolsize; i++) {
-	sPRINTF(str,"%d  ", ppool[i]);Rprintf(str);
-}Rprintf("\n");
-#endif
 
 		node = m_pRorder[node];
 		for(i = 0; i < poolsize; i++)
@@ -277,15 +245,6 @@ for(i = 0; i < poolsize; i++) {
 		for(i = 0; i < parsize; i++)
 			m_parBuff2[i] = m_pRorder[parset[i]];
 
-#ifdef DEBUG_INFO
-sPRINTF(str,"    reordered node=%d, pool = ", node);Rprintf(str);
-for(i = 0; i < poolsize; i++) {
-	sPRINTF(str,"%d  ", m_parBuff1[i]);Rprintf(str);
-}Rprintf("\n par = ");
-for(i = 0; i < parsize; i++) {
-	sPRINTF(str,"%d  ", m_parBuff2[i]);Rprintf(str);
-}Rprintf("\n");
-#endif
 		CATNET_CACHE_EL<double> *pCacheEl = new CATNET_CACHE_EL<double>(
 			m_parBuff1, poolsize, node, m_parBuff2, parsize, probNode, flik);
 
@@ -302,16 +261,11 @@ for(i = 0; i < parsize; i++) {
 		while(nlookup >= g_ncache)
 			nlookup -= g_ncache;	
 
-#ifdef DEBUG_INFO
-sPRINTF(str,"\nnlookup=%d\n", nlookup);Rprintf(str);
-#endif
 		if(g_pcache[nlookup]) {
 
 			delete g_pcache[nlookup];
 		}
 		g_pcache[nlookup] = pCacheEl;
-		/*clock_t lt = clock();
-		Rprintf("%ld\n", lt);*/
 		return 1;
 	}
 

@@ -42,7 +42,8 @@ char *gen_prob_string(int node, SEXP parlist, int paridx, SEXP catlist, SEXP pro
 	if(paridx >= length(parlist)) {
 		pcats = VECTOR_ELT(catlist, node);
 		newstr = (char*)CATNET_MALLOC(((strlen(str)+1+32)*length(pcats))*sizeof(char));
-
+		if (!newstr)
+			return str;
 		newstr[0] = 0;
 		for(j = 0; j < length(pcats); j++) {
 			sprintf(newstr, "%s%s%s %f\n", newstr, str, CHAR(STRING_ELT(pcats, j)), NUMERIC_POINTER(problist)[j]);
@@ -57,16 +58,20 @@ char *gen_prob_string(int node, SEXP parlist, int paridx, SEXP catlist, SEXP pro
 	pcats = VECTOR_ELT(catlist, npar);
 
 	newstr = (char*)CATNET_MALLOC(sizeof(char));
+	if (!newstr)
+		return str;
 	newstr[0] = 0;
 	for(j = 0; j < length(pcats); j++) {
 		parprobs = VECTOR_ELT(problist, j);
 
 		aux = (char*)CATNET_MALLOC((strlen(str)+1+8)*sizeof(char));
-
+		if (!aux)
+			break;
 		sprintf(aux, "%s%s", str, CHAR(STRING_ELT(pcats, j)));
 		aux2 = gen_prob_string(node, parlist, paridx + 1, catlist, parprobs, aux);
-
 		aux3 = (char*)CATNET_MALLOC((strlen(newstr)+strlen(aux2)+2)*sizeof(char));
+		if (!aux2 || !aux3)
+			break;
 		sprintf(aux3, "%s%s", newstr, aux2);
 		CATNET_FREE(newstr);
 		newstr = aux3;
@@ -85,9 +90,9 @@ SEXP prob_string(SEXP rnodes, SEXP rparents, SEXP rcatlist, SEXP rproblist) {
 	SEXP nodepars, nodeproblist, pstr;
 	char *str = NULL, *newstr, *aux;
 
-	PROTECT(rnodes = AS_LIST(rnodes));
-	PROTECT(rparents = AS_LIST(rparents));
-	PROTECT(rcatlist = AS_LIST(rcatlist));
+	PROTECT(rnodes    = AS_LIST(rnodes));
+	PROTECT(rparents  = AS_LIST(rparents));
+	PROTECT(rcatlist  = AS_LIST(rcatlist));
 	PROTECT(rproblist = AS_LIST(rproblist));
 
 	for(node = 0; node < length(rnodes); node++) {
@@ -96,6 +101,8 @@ SEXP prob_string(SEXP rnodes, SEXP rparents, SEXP rcatlist, SEXP rproblist) {
 		newstr = gen_prob_string(node, nodepars, 0, rcatlist, nodeproblist, NULL);
 		if(str) {
 			aux = (char*)CATNET_MALLOC((strlen(str)+strlen(newstr)+1+16)*sizeof(char));
+			if (!aux)
+				break;
 			sprintf(aux, "%sNode [%d]:\n%s", str, node, newstr);
 			CATNET_FREE(str);
 			CATNET_FREE(newstr);
@@ -131,13 +138,12 @@ void gen_prob_vector(int node, SEXP parlist, int paridx, SEXP catlist, SEXP prob
 			return;
 		}
 		newvec = (double*)CATNET_MALLOC((nvec + length(pcats))*sizeof(double));
+		if (!newvec)
+			return;
 		memcpy(newvec, pvec, nvec*sizeof(double));
-		//Rprintf("%d:  ", node);
 		for(j = 0; j < length(pcats); j++) {
 			newvec[nvec+j] = NUMERIC_POINTER(problist)[j];
-			//Rprintf("  %f", newvec[nvec+j]);
 		}
-		//Rprintf("\n");
 		CATNET_FREE(pvec);
 		pvec = newvec;
 		nvec += length(pcats);
@@ -172,14 +178,15 @@ SEXP prob_vector(SEXP rnodes, SEXP rparents, SEXP rcatlist, SEXP rproblist) {
 	PROTECT(pstr = allocVector(VECSXP, length(rnodes)));
 
 	for(node = 0; node < length(rnodes); node++) {
-		nodepars = VECTOR_ELT(rparents, node);
+		nodepars     = VECTOR_ELT(rparents, node);
 		nodeproblist = VECTOR_ELT(rproblist, node);
 		pvec = 0;
 		nvec = 0;
 		gen_prob_vector(node, nodepars, 0, rcatlist, nodeproblist, pvec, nvec);
 		PROTECT(rvec = NEW_NUMERIC(nvec));
 		prvec = NUMERIC_POINTER(rvec);
-		memcpy(prvec, pvec, nvec*sizeof(double));
+		if (prvec && pvec)
+			memcpy(prvec, pvec, nvec*sizeof(double));
 		CATNET_FREE(pvec);
 		SET_VECTOR_ELT(pstr, node, rvec);
 		UNPROTECT(1);

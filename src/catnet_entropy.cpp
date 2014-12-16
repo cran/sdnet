@@ -60,8 +60,14 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 
 	// categoies
 	pNodeNumCats = (int*)CATNET_MALLOC(numnodes*sizeof(int));
+	if (!pNodeNumCats) 
+		return rvec;
 	pNodeCats = (int**)CATNET_MALLOC(numnodes*sizeof(int*));
-	memset(pNodeCats, 0, numnodes*sizeof(int*));
+	if (!pNodeCats) { 
+		CATNET_FREE(pNodeNumCats);
+		return rvec;
+	}
+	memset(pNodeCats,    0, numnodes*sizeof(int*));
 	memset(pNodeNumCats, 0, numnodes*sizeof(int));
 
 	maxCategories = 1;
@@ -76,6 +82,11 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 		}
 		pNodeNumCats[i] = maxcat - mincat + 1;
 		pNodeCats[i] = (int*)CATNET_MALLOC(pNodeNumCats[i]*sizeof(int));
+		if (!pNodeCats[i]) {
+			CATNET_FREE(pNodeCats);
+			CATNET_FREE(pNodeNumCats);
+			return rvec;
+		}
 		for(j = 0; j < pNodeNumCats[i]; j++)
 			pNodeCats[i][j] = mincat + j;
 	}
@@ -99,10 +110,17 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 		if(maxCategories < pNodeNumCats[i])
 			maxCategories = pNodeNumCats[i];
 	}
-	//Rprintf("maxCategories = %d\n", maxCategories);
+
 	pprobs = (int*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(int));
 
 	klmat = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
+
+	if (!pprobs || !klmat) {
+		CATNET_FREE(pNodeCats);
+		CATNET_FREE(pNodeNumCats);
+		return rvec;
+	}
+
 	memset(klmat, 0, numnodes*numnodes*sizeof(double));
 
 	psubSamples = 0;
@@ -116,7 +134,7 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 	for(nnode1 = 0; nnode1 < numnodes; nnode1++) {
 		psamples1 = pSamples;
 		numsamples1 = numsamples;
-		if(pPerturbations) {
+		if(pPerturbations && psubSamples) {
 			numsubsamples = 0;
 			for(j = 0; j < numsamples; j++) {
 				if(!pPerturbations[j * numnodes + nnode1]) {
@@ -127,7 +145,7 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 				numsamples1 = numsubsamples;
 			}
 		}
-		//Rprintf("nnode = %d (%d)\n", nnode1, numsamples1);
+
 		for(nnode2 = 0; nnode2 < numnodes; nnode2++) {
 	
 			memset(pprobs, 0, maxCategories*maxCategories*sizeof(int));
@@ -145,7 +163,6 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 				if(fsum > 0) {
 					floglik -= fsum*(double)log((double)fsum);
 					floglik /= fsum;
-					//floglik *= numsamples;
 				}
 				klmat[nnode2*numnodes + nnode1] = -floglik;
 				continue;
@@ -171,7 +188,6 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 			}
 			if(fsum > 0) {
 				floglik /= fsum;
-				//floglik *= numsamples;
 			}
 			klmat[nnode2*numnodes + nnode1] = -floglik;
 		}
@@ -200,11 +216,11 @@ SEXP catnetEntropyPairwise(SEXP rSamples, SEXP rPerturbations) {
 	if(klmat) {
 		PROTECT(rvec = NEW_NUMERIC(numnodes*numnodes));
 		pvec = NUMERIC_POINTER(rvec);
-		memcpy(pvec, klmat, numnodes*numnodes*sizeof(double));
+		if (pvec)
+			memcpy(pvec, klmat, numnodes*numnodes*sizeof(double));
 		UNPROTECT(1);
+		CATNET_FREE(klmat);
 	}
-
-	CATNET_FREE(klmat);
 
 	//char str[128];
 	//sPRINTF(str, "Mem Balance  %d\n", (int)g_memcounter);
@@ -242,13 +258,25 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 		pSamples[j]--;
 	}
 
-	porder = (int*)CATNET_MALLOC(numnodes*sizeof(int));
+	porder     = (int*)CATNET_MALLOC(numnodes*sizeof(int));
 	pnoderanks = (double*)CATNET_MALLOC(2*numnodes*sizeof(double));
 
 	// categories
 	pNodeNumCats = (int*)CATNET_MALLOC(numnodes*sizeof(int));
-	pNodeCats = (int**)CATNET_MALLOC(numnodes*sizeof(int*));
-	memset(pNodeCats, 0, numnodes*sizeof(int*));
+	pNodeCats    = (int**)CATNET_MALLOC(numnodes*sizeof(int*));
+
+	if (!porder || !pnoderanks || !pNodeNumCats || !pNodeCats) {
+		if (porder)
+			CATNET_FREE(porder);
+		if (pnoderanks)
+			CATNET_FREE(pnoderanks);
+		if (pNodeCats)
+			CATNET_FREE(pNodeCats);
+		if (pNodeNumCats)
+			CATNET_FREE(pNodeNumCats);
+	}
+
+	memset(pNodeCats,    0, numnodes*sizeof(int*));
 	memset(pNodeNumCats, 0, numnodes*sizeof(int));
 
 	maxCategories = 1;
@@ -263,6 +291,13 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 		}
 		pNodeNumCats[i] = maxcat - mincat + 1;
 		pNodeCats[i] = (int*)CATNET_MALLOC(pNodeNumCats[i]*sizeof(int));
+		if (!pNodeCats[i]) {
+			CATNET_FREE(porder);
+			CATNET_FREE(pnoderanks);
+			CATNET_FREE(pNodeCats);
+			CATNET_FREE(pNodeNumCats);
+			return rvec;
+		}
 		for(j = 0; j < pNodeNumCats[i]; j++)
 			pNodeCats[i][j] = mincat + j;
 	}
@@ -286,10 +321,19 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 		if(maxCategories < pNodeNumCats[i])
 			maxCategories = pNodeNumCats[i];
 	}
-	//Rprintf("maxCategories = %d\n", maxCategories);
+
 	pprobs = (int*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(int));
 
 	klmat = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
+
+	if (!pprobs || !klmat) {
+		CATNET_FREE(porder);
+		CATNET_FREE(pnoderanks);
+		CATNET_FREE(pNodeCats);
+		CATNET_FREE(pNodeNumCats);
+		return rvec;
+	}
+
 	memset(klmat, 0, numnodes*numnodes*sizeof(double));
 
 	psubSamples = 0;
@@ -303,7 +347,7 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 	for(nnode1 = 0; nnode1 < numnodes; nnode1++) {
 		psamples1 = pSamples;
 		numsamples1 = numsamples;
-		if(pPerturbations) {
+		if(pPerturbations && psubSamples) {
 			numsubsamples = 0;
 			for(j = 0; j < numsamples; j++) {
 				if(!pPerturbations[j * numnodes + nnode1]) {
@@ -314,7 +358,7 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 				numsamples1 = numsubsamples;
 			}
 		}
-		//Rprintf("nnode = %d (%d)\n", nnode1, numsamples1);
+
 		for(nnode2 = 0; nnode2 < numnodes; nnode2++) {
 	
 			memset(pprobs, 0, maxCategories*maxCategories*sizeof(int));
@@ -332,7 +376,6 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 				if(fsum > 0) {
 					floglik -= fsum*(double)log((double)fsum);
 					floglik /= fsum;
-					//floglik *= numsamples;
 				}
 				klmat[nnode2*numnodes + nnode1] = -floglik;
 				continue;
@@ -358,7 +401,6 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 			}
 			if(fsum > 0) {
 				floglik /= fsum;
-				//floglik *= numsamples;
 			}
 			klmat[nnode2*numnodes + nnode1] = -floglik;
 		}
@@ -394,63 +436,7 @@ SEXP catnetEntropyOrder(SEXP rSamples, SEXP rPerturbations) {
 		pnoderanks[nnode1] = floglik;
 	}
 
-//Rprintf("pnoderanks = ");
-//for(i = 0; i < numnodes; i++)
-//Rprintf(" %f", pnoderanks[i]);
-//Rprintf("\n");
 	_order<double>(pnoderanks, numnodes, porder, 1);
-//Rprintf("porder = ");
-//for(i = 0; i < numnodes; i++)
-//Rprintf(" %d", porder[i]+1);
-//Rprintf("\n");
-
-	/*fsum = 0;
-	pnoderanks[porder[0]] = 0;
-	for(nnode1 = 1; nnode1 < numnodes; nnode1++) {
-		faux = 0;
-		for(i = 0; i < nnode1; i++)
-			if(faux < klmat[porder[i]*numnodes + porder[nnode1]])
-				faux = klmat[porder[i]*numnodes + porder[nnode1]];
-		pnoderanks[porder[nnode1]] = faux;
-Rprintf("pnoderanks[%d] = %f\n", porder[nnode1], pnoderanks[porder[nnode1]]);
-		fsum += faux;
-	}
-
-	for(nnode1 = 0; nnode1 < numnodes; nnode1++) {
-		for(nnode2 = nnode1 + 1; nnode2 < numnodes; nnode2++) {
-			memcpy(pnoderanks + numnodes, pnoderanks, numnodes*sizeof(double));
-
-			for(d = nnode1; d <= nnode2; d++) {
-				faux = 0;
-				for(i = 0; i < d; i++) {
-					if(i == nnode1 && faux < klmat[porder[nnode2]*numnodes + porder[d]])
-						faux = klmat[porder[nnode2]*numnodes + porder[d]];
-					else if(i == nnode2 && faux < klmat[porder[nnode1]*numnodes + porder[d]])
-						faux = klmat[porder[nnode1]*numnodes + porder[d]];
-					else if(faux < klmat[porder[i]*numnodes + porder[d]])
-						faux = klmat[porder[i]*numnodes + porder[d]];
-				}
-				if(d == nnode1)
-					pnoderanks[numnodes+porder[nnode2]] = faux;
-				else if(d == nnode2)
-					pnoderanks[numnodes+porder[nnode1]] = faux;
-				else
-					pnoderanks[numnodes+porder[d]] = faux;
-			}
-			faux = 0;
-			for(i = 0; i < numnodes; i++)
-				faux += pnoderanks[numnodes+i];
-
-			if(faux > fsum) {
-Rprintf("change %d <-> %d    %f (%f)\n", porder[nnode1]+1, porder[nnode2]+1, fsum, faux);
-				fsum = faux;
-				i = porder[nnode1];
-				porder[nnode1] = porder[nnode2];
-				porder[nnode2] = i;
-				memcpy(pnoderanks, pnoderanks + numnodes, numnodes*sizeof(double));
-			}
-		}
-	}*/
 
 	CATNET_FREE(klmat);
 
@@ -511,8 +497,14 @@ SEXP catnetKLpairwise(SEXP rSamples, SEXP rPerturbations) {
 
 	// categoies
 	pNodeNumCats = (int*)CATNET_MALLOC(numnodes*sizeof(int));
+	if (!pNodeNumCats) 
+		return rvec;
 	pNodeCats = (int**)CATNET_MALLOC(numnodes*sizeof(int*));
-	memset(pNodeCats, 0, numnodes*sizeof(int*));
+	if (!pNodeCats) { 
+		CATNET_FREE(pNodeNumCats);
+		return rvec;
+	}
+	memset(pNodeCats,    0, numnodes*sizeof(int*));
 	memset(pNodeNumCats, 0, numnodes*sizeof(int));
 
 	maxCategories = 1;
@@ -527,6 +519,11 @@ SEXP catnetKLpairwise(SEXP rSamples, SEXP rPerturbations) {
 		}
 		pNodeNumCats[i] = maxcat - mincat + 1;
 		pNodeCats[i] = (int*)CATNET_MALLOC(pNodeNumCats[i]*sizeof(int));
+		if (!pNodeCats[i]) {
+			CATNET_FREE(pNodeCats);
+			CATNET_FREE(pNodeNumCats);
+			return rvec;
+		}
 		for(j = 0; j < pNodeNumCats[i]; j++)
 			pNodeCats[i][j] = mincat + j;
 	}
@@ -553,6 +550,19 @@ SEXP catnetKLpairwise(SEXP rSamples, SEXP rPerturbations) {
 
 	pprobs1 = (double*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(double));
 	pprobs2 = (double*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(double));
+	klmat   = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
+
+	if (!pprobs1 || !pprobs2 || !klmat) { 
+		CATNET_FREE(pNodeCats);
+		CATNET_FREE(pNodeNumCats);
+		if (pprobs1) 
+			CATNET_FREE(pprobs1);
+		if (pprobs2) 
+			CATNET_FREE(pprobs2);
+		if (klmat) 
+			CATNET_FREE(klmat);
+		return rvec;
+	}
 
 	pSamplesPert = 0;
 	pPerturbations = 0;
@@ -562,12 +572,12 @@ SEXP catnetKLpairwise(SEXP rSamples, SEXP rPerturbations) {
 		pSamplesPert = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
 	}
 
-	klmat = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
+	
 	memset(klmat, 0, numnodes*numnodes*sizeof(double));
 
 	for(nnode1 = 0; nnode1 < numnodes; nnode1++) {
 		numsamplesPert = 0;
-		if(pPerturbations) {
+		if(pPerturbations && pSamplesPert) {
 			for(j = 0; j < numsamples; j++) {
 				if(!pPerturbations[j * numnodes + nnode1]) {
 					memcpy(pSamplesPert + numsamplesPert*numnodes, pSamples + j*numnodes, numnodes*sizeof(int));
@@ -575,7 +585,7 @@ SEXP catnetKLpairwise(SEXP rSamples, SEXP rPerturbations) {
 				}
 			}
 		}
-		//Rprintf("\nnnode = %d (%d)\n", nnode1, numsamplesPert);
+
 		for(nnode2 = 0; nnode2 < numnodes; nnode2++) {
 	
 			if(nnode1 == nnode2)
@@ -624,66 +634,6 @@ SEXP catnetKLpairwise(SEXP rSamples, SEXP rPerturbations) {
 			}
 			klmat[nnode2*numnodes + nnode1] += floglik;
 
-			/*memset(pprobs2, 0, maxCategories*maxCategories*sizeof(double));
-			// estimate logP(nnode2|nnode1) for the whole sample
-			for(j = 0; j < numsamples; j++) 
-				pprobs2[maxCategories*pSamples[j*numnodes + nnode1] + pSamples[j*numnodes + nnode2]]++;
-
-			memset(pprobs1, 0, maxCategories*maxCategories*sizeof(double));
-			// estimate logP(nnode2|nnode1) for the perturbed sub-sample only
-			for(j = 0; j < numsamplesPert; j++) 
-				pprobs1[maxCategories*pSamplesPert[j*numnodes + nnode1] + pSamplesPert[j*numnodes + nnode2]]++;
-
-			for(i = 0; i < pNodeNumCats[nnode1]; i++) {
-				fsum = 0;
-				for(j = 0; j < pNodeNumCats[nnode2]; j++)
-					fsum += pprobs1[maxCategories*i+j];
-				if(fsum <= 0)
-					continue;
-				faux = 1 / fsum;
-				for(j = 0; j < pNodeNumCats[nnode2]; j++)
-					pprobs1[maxCategories*i+j] *= faux;
-			}
-			for(i = 0; i < pNodeNumCats[nnode1]; i++) {
-				fsum = 0;
-				for(j = 0; j < pNodeNumCats[nnode2]; j++)
-					fsum += pprobs2[maxCategories*i+j];
-				if(fsum <= 0)
-					continue;
-				faux = 1 / fsum;
-				for(j = 0; j < pNodeNumCats[nnode2]; j++)
-					pprobs2[maxCategories*i+j] *= faux;
-			}
-
-			floglik = 0;
-			for(i = 0; i < pNodeNumCats[nnode1]; i++) {
-				for(j = 0; j < pNodeNumCats[nnode2]; j++) {
-					if(pprobs1[maxCategories*i+j] > 0 && pprobs2[maxCategories*i+j] > 0)
-						floglik += pprobs1[maxCategories*i+j]*
-						(double)log((double)pprobs1[maxCategories*i+j] / (double)pprobs2[maxCategories*i+j]);
-					else if(pprobs1[maxCategories*i+j] != 0 && pprobs2[maxCategories*i+j] == 0)
-						floglik = FLT_MAX;
-				}
-			}
-			klmat[nnode2*numnodes + nnode1] += floglik;*/
-
-			/*Rprintf("nnode2 = %d: ", nnode2);
-			for(i = 0; i < pNodeNumCats[nnode2]; i++) {
-				Rprintf(" [");
-				for(j = 0; j < pNodeNumCats[nnode1]; j++) {
-					Rprintf("%f ", pprobs1[maxCategories*i+j]);
-				}
-				Rprintf("] ");
-			}
-			Rprintf("\n");
-			for(i = 0; i < pNodeNumCats[nnode2]; i++) {
-				Rprintf(" [");
-				for(j = 0; j < pNodeNumCats[nnode1]; j++) {
-					Rprintf("%f ", pprobs2[maxCategories*i+j]);
-				}
-				Rprintf("] ");
-			}
-			Rprintf(" KL = %f\n", floglik);*/
 		}
 	}
 
@@ -762,8 +712,14 @@ SEXP catnetPearsonPairwise(SEXP rSamples, SEXP rPerturbations) {
 
 	// categoies
 	pNodeNumCats = (int*)CATNET_MALLOC(numnodes*sizeof(int));
+	if (!pNodeNumCats) 
+		return rvec;
 	pNodeCats = (int**)CATNET_MALLOC(numnodes*sizeof(int*));
-	memset(pNodeCats, 0, numnodes*sizeof(int*));
+	if (!pNodeCats) { 
+		CATNET_FREE(pNodeNumCats);
+		return rvec;
+	}
+	memset(pNodeCats,    0, numnodes*sizeof(int*));
 	memset(pNodeNumCats, 0, numnodes*sizeof(int));
 
 	maxCategories = 1;
@@ -778,6 +734,11 @@ SEXP catnetPearsonPairwise(SEXP rSamples, SEXP rPerturbations) {
 		}
 		pNodeNumCats[i] = maxcat - mincat + 1;
 		pNodeCats[i] = (int*)CATNET_MALLOC(pNodeNumCats[i]*sizeof(int));
+		if (!pNodeCats[i]) {
+			CATNET_FREE(pNodeCats);
+			CATNET_FREE(pNodeNumCats);
+			return rvec;
+		}
 		for(j = 0; j < pNodeNumCats[i]; j++)
 			pNodeCats[i][j] = mincat + j;
 	}
@@ -804,21 +765,33 @@ SEXP catnetPearsonPairwise(SEXP rSamples, SEXP rPerturbations) {
 
 	pprobs1 = (double*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(double));
 	pprobs2 = (double*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(double));
+	klmat   = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
+
+	if (!pprobs1 || !pprobs2 || !klmat) { 
+		CATNET_FREE(pNodeCats);
+		CATNET_FREE(pNodeNumCats);
+		if (pprobs1) 
+			CATNET_FREE(pprobs1);
+		if (pprobs2) 
+			CATNET_FREE(pprobs2);
+		if (klmat) 
+			CATNET_FREE(klmat);
+		return rvec;
+	}
 
 	pSamplesPert = 0;
 	pPerturbations = 0;
 	if(!isNull(rPerturbations)) {
 		PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 		pPerturbations = INTEGER(rPerturbations);
-		pSamplesPert = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
+		pSamplesPert   = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
 	}
 
-	klmat = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
 	memset(klmat, 0, numnodes*numnodes*sizeof(double));
 
 	for(nnode1 = 0; nnode1 < numnodes; nnode1++) {
 		numsamplesPert = 0;
-		if(pPerturbations) {
+		if(pPerturbations && pSamplesPert) {
 			for(j = 0; j < numsamples; j++) {
 				if(!pPerturbations[j * numnodes + nnode1]) {
 					memcpy(pSamplesPert + numsamplesPert*numnodes, pSamples + j*numnodes, numnodes*sizeof(int));
@@ -826,7 +799,7 @@ SEXP catnetPearsonPairwise(SEXP rSamples, SEXP rPerturbations) {
 				}
 			}
 		}
-		//Rprintf("\nnnode = %d (%d)\n", nnode1, numsamplesPert);
+
 		for(nnode2 = 0; nnode2 < numnodes; nnode2++) {
 	
 			if(nnode1 == nnode2)
@@ -870,23 +843,6 @@ SEXP catnetPearsonPairwise(SEXP rSamples, SEXP rPerturbations) {
 			}
 			klmat[nnode2*numnodes + nnode1] += floglik;
 
-			/*Rprintf("nnode2 = %d: ", nnode2);
-			for(i = 0; i < pNodeNumCats[nnode2]; i++) {
-				Rprintf(" [");
-				for(j = 0; j < pNodeNumCats[nnode1]; j++) {
-					Rprintf("%f ", pprobs1[maxCategories*i+j]);
-				}
-				Rprintf("] ");
-			}
-			Rprintf("\n");
-			for(i = 0; i < pNodeNumCats[nnode2]; i++) {
-				Rprintf(" [");
-				for(j = 0; j < pNodeNumCats[nnode1]; j++) {
-					Rprintf("%f ", pprobs2[maxCategories*i+j]);
-				}
-				Rprintf("] ");
-			}
-			Rprintf(" KL = %f\n", floglik);*/
 		}
 	}
 
@@ -963,8 +919,17 @@ double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations) {
 
 	// categoies
 	pNodeNumCats = (int*)CATNET_MALLOC(numnodes*sizeof(int));
+	if (!pNodeNumCats) {
+		CATNET_FREE(pSamples);
+		return 0;
+	}
 	pNodeCats = (int**)CATNET_MALLOC(numnodes*sizeof(int*));
-	memset(pNodeCats, 0, numnodes*sizeof(int*));
+	if (!pNodeCats) { 
+		CATNET_FREE(pSamples);
+		CATNET_FREE(pNodeNumCats);
+		return 0;
+	}
+	memset(pNodeCats,    0, numnodes*sizeof(int*));
 	memset(pNodeNumCats, 0, numnodes*sizeof(int));
 
 	maxCategories = 1;
@@ -979,6 +944,12 @@ double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations) {
 		}
 		pNodeNumCats[i] = maxcat - mincat + 1;
 		pNodeCats[i] = (int*)CATNET_MALLOC(pNodeNumCats[i]*sizeof(int));
+		if (!pNodeCats[i]) {
+			CATNET_FREE(pSamples);
+			CATNET_FREE(pNodeCats);
+			CATNET_FREE(pNodeNumCats);
+			return 0;
+		}
 		for(j = 0; j < pNodeNumCats[i]; j++)
 			pNodeCats[i][j] = mincat + j;
 	}
@@ -1003,7 +974,19 @@ double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations) {
 			maxCategories = pNodeNumCats[i];
 	}
 
-	pprobs = (double*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(double));
+	pprobs   = (double*)CATNET_MALLOC(maxCategories*maxCategories*sizeof(double));
+	matPairs = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
+
+	if (!pprobs || !matPairs) { 
+		CATNET_FREE(pSamples);
+		CATNET_FREE(pNodeCats);
+		CATNET_FREE(pNodeNumCats);
+		if (pprobs) 
+			CATNET_FREE(pprobs);
+		if (matPairs) 
+			CATNET_FREE(matPairs);
+		return 0;
+	}
 
 	pSamplesPert = 0;
 	pPerturbations = 0;
@@ -1012,13 +995,12 @@ double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations) {
 		pPerturbations = INTEGER(rPerturbations);
 		pSamplesPert = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
 	}
-
-	matPairs = (double*)CATNET_MALLOC(numnodes*numnodes*sizeof(double));
+	
 	memset(matPairs, 0, numnodes*numnodes*sizeof(double));
 
 	for(nnode1 = 0; nnode1 < numnodes; nnode1++) {
 		numsamplesPert = 0;
-		if(pPerturbations) {
+		if(pPerturbations && pSamplesPert) {
 			for(j = 0; j < numsamples; j++) {
 				if(!pPerturbations[j * numnodes + nnode1]) {
 					memcpy(pSamplesPert + numsamplesPert*numnodes, pSamples + j*numnodes, numnodes*sizeof(int));
@@ -1026,7 +1008,6 @@ double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations) {
 				}
 			}
 		}
-		//Rprintf("\nnnode = %d (%d)\n", nnode1, numsamplesPert);
 		for(nnode2 = 0; nnode2 < numnodes; nnode2++) {
 	
 			if(nnode1 == nnode2)
@@ -1035,7 +1016,7 @@ double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations) {
 			ncount = 0;
 			memset(pprobs, 0, maxCategories*maxCategories*sizeof(double));
 			// estimate logP(nnode1|nnode2)
-			if(pPerturbations) {
+			if(pPerturbations && pSamplesPert) {
 				for(j = 0; j < numsamplesPert; j++) {
 					pprobs[maxCategories*pSamplesPert[j*numnodes + nnode2] + pSamplesPert[j*numnodes + nnode1]]++; 
 					ncount++;
@@ -1066,16 +1047,15 @@ double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations) {
 			matPairs[nnode1*numnodes + nnode2] = floglik;
 		}
 		fsum = 0; fmin = FLT_MAX; fmax = -FLT_MAX;
-//Rprintf("matPairs[%d] = ", nnode1+1);
+
 		for(nnode2 = 0; nnode2 < numnodes; nnode2++) {
-//Rprintf("%f ", matPairs[nnode1*numnodes + nnode2]);
 			fsum += matPairs[nnode1*numnodes + nnode2];
 			if(fmin > matPairs[nnode1*numnodes + nnode2])
 				fmin = matPairs[nnode1*numnodes + nnode2];
 			if(fmax < matPairs[nnode1*numnodes + nnode2])
 				fmax = matPairs[nnode1*numnodes + nnode2];
 		}
-//Rprintf("\n");
+
 		fsum = 1;
 		if(fmax-fmin>0)
 			fsum = 1 / (fmax-fmin);

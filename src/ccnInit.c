@@ -46,7 +46,6 @@ static const R_CallMethodDef R_CallDef[] = {
 void R_init_sdnet(DllInfo *info)
 {
 	R_registerRoutines(info,NULL,R_CallDef,NULL,NULL);
-	//Rprintf("ccnInit\n");
 	g_memcounter = 0;
 	// to disable C stack limit
 	//R_CStackLimit = (uintptr_t)-1;
@@ -54,6 +53,5 @@ void R_init_sdnet(DllInfo *info)
 
 void R_unload_sdnet(DllInfo *info)
 {
-	//Rprintf("ccnUnload\n");
 	catnetReleaseCache();
 }

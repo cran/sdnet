@@ -117,22 +117,32 @@ public:
 
 	// sets sample conditional probability and returns its log-likelihood
 #ifdef DISCRETE_SAMPLE
-	t_prob nodeLoglik(t_ind nnode, t_sample *pSamples, int& nsamples, t_ind *pars, int numPars) {
+	t_prob nodeLoglik(t_ind nnode, t_sample *pSamples, int& nsamples, t_ind *pars, 
+			  int numPars) {
+
 		int i, k, kpad, pad, nProbSize, samp, ncount, nodecats, *pcats;
 		/* pSamples have categories in the range [1, nodecats] */
 		t_prob loglik, psum;
+
+		if (!m_pNodeNumCats || !m_prob)
+			return (t_prob)-FLT_MAX;
 		if (nnode < 0 || nnode >= m_numNodes || !pSamples || nsamples < 1)
 			return (t_prob)-FLT_MAX;
+
 		nodecats  = m_pNodeNumCats[nnode];
 		nProbSize = nodecats;
 		for(i = 0; i < numPars; i++)
 			nProbSize *= m_pNodeNumCats[pars[i]];
 		if(nProbSize > m_probSize)
 			return (t_prob)-FLT_MAX;
+
 		pcats = (int*)CATNET_MALLOC(numPars*sizeof(int));
+		if (!pcats)
+			return (t_prob)-FLT_MAX;
 		for (i = 0; i < numPars; i++) 
 			pcats[i] = m_pNodeNumCats[pars[i]];
 		memset(m_prob, 0, nProbSize*sizeof(t_prob));
+
 		ncount = 0;
 		kpad = 0;		
 		for (k = 0; k < nsamples; k++) {
@@ -181,24 +191,39 @@ public:
 		return(loglik);
 	}
 
-	t_prob nodeLoglikKL(t_ind nnode, t_sample *pSamples, int& nsamples, t_ind *pars, int numPars, int *pClasses, int bUsePearson = 0) {
+	t_prob nodeLoglikKL(t_ind nnode, t_sample *pSamples, int& nsamples, t_ind *pars, 
+			    int numPars, int *pClasses, int bUsePearson = 0) {
+
 		int i, k, kpad, pad, nProbSize, samp, ncount, nodecats, *pcats;
 		/* pSamples have categories in the range [1, nodecats] */
 		t_prob loglik, psum,  *prob2, psum2;
+
+		if (!m_pNodeNumCats || !m_prob)
+			return (t_prob)-FLT_MAX;
 		if (nnode < 0 || nnode >= m_numNodes || !pSamples || nsamples < 1)
 			return (t_prob)-FLT_MAX;
+
 		nodecats  = m_pNodeNumCats[nnode];
 		nProbSize = nodecats;
 		for(i = 0; i < numPars; i++)
 			nProbSize *= m_pNodeNumCats[pars[i]];
 		if(nProbSize > m_probSize)
 			return (t_prob)-FLT_MAX;
+
 		pcats = (int*)CATNET_MALLOC(numPars*sizeof(int));
+		if (!pcats)
+			return (t_prob)-FLT_MAX;
 		for (i = 0; i < numPars; i++) 
 			pcats[i] = m_pNodeNumCats[pars[i]];
+
 		memset(m_prob, 0, nProbSize*sizeof(t_prob));
 		prob2 = (t_prob*)CATNET_MALLOC(nProbSize*sizeof(t_prob));
+		if (!prob2) {
+			CATNET_FREE(pcats);
+			return (t_prob)-FLT_MAX;
+		}
 		memset(prob2, 0, nProbSize*sizeof(t_prob));
+
 		ncount = 0;
 		kpad = 0;		
 		for (k = 0; k < nsamples; k++) {
@@ -263,9 +288,11 @@ public:
 		return(loglik);
 	}
 #else
-	void _unlist_parent_probs(t_ind nnode, t_ind *pnodepars, int nodepars, t_prob *psample, 
-				int &listind, t_prob *plist = 0, int parid = -1, int parcat = -1, 
+	void _unlist_parent_probs(t_ind nnode, t_ind *pnodepars, int nodepars, 
+				  t_prob *psample, int &listind, t_prob *plist = 0, 
+				  int parid = -1, int parcat = -1, 
 				t_prob ptemp = 1, t_prob fact = 0) {
+
 		int i, ncat, sind;
 		if(!plist || listind < 0)
 			return;
@@ -312,24 +339,32 @@ public:
 		for(i = 0; i < pnodepars[parid]; i++)
 			sind += m_pNodeNumCats[i];
 		for(parcat = 0; parcat < m_pNodeNumCats[nnode]; parcat++)
-			_unlist_parent_probs(nnode, pnodepars, nodepars, psample, listind, plist, parid, parcat, ptemp*psample[sind+parcat], fact);
+			_unlist_parent_probs(nnode, pnodepars, nodepars, psample, 
+			listind, plist, parid, parcat, ptemp*psample[sind+parcat], fact);
 	};
 
 	t_prob nodeLoglik(t_ind nnode, t_prob *pSamples, int& nsamples, t_ind *pars, int numPars) {
+
 		int i, k, nProbSize, svalid, listind, nodecats, ncount;
 		/* pSamples have categories in the range [1, n_cats] */
 		t_prob loglik, psum;
+
+		if (!m_pNodeNumCats || !m_prob)
+			return (t_prob)-FLT_MAX;
 		if (nnode < 0 || nnode >= m_numNodes || !pSamples || nsamples < 1)
 			return (t_prob)-FLT_MAX;
+
 		nodecats  = m_pNodeNumCats[nnode];
 		nProbSize = nodecats;
 		for(i = 0; i < numPars; i++)
 			nProbSize *= m_pNodeNumCats[pars[i]];
 		memset(m_prob, 0, nProbSize*sizeof(t_prob));
+
 		ncount = 0;
 		for (k = 0; k < nsamples; k++) {
 			listind = 0;
-			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, listind, m_pProbVect, -1, -1, 1, 1);			
+			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, 
+					     listind, m_pProbVect, -1, -1, 1, 1);
 			svalid = 1;
 			for(i = 0; i < nProbSize; i++)
 				if(m_pProbVect[i] < 0) /* NA */ {
@@ -361,23 +396,35 @@ public:
 		return(loglik);
 	}
 
-	t_prob nodeLoglikKL(t_ind nnode, t_prob *pSamples, int& nsamples, t_ind *pars, int numPars, int *pClasses, int bUsePearson = 0) {
+	t_prob nodeLoglikKL(t_ind nnode, t_prob *pSamples, int& nsamples, t_ind *pars, 
+			    int numPars, int *pClasses, int bUsePearson = 0) {
+
 		int i, k, nProbSize, svalid, listind, nodecats, ncount;
 		/* pSamples have categories in the range [1, n_cats] */
 		t_prob loglik, psum, *prob2, psum2;
+
+		if (!m_pNodeNumCats || !m_prob)
+			return (t_prob)-FLT_MAX;
 		if (nnode < 0 || nnode >= m_numNodes || !pSamples || nsamples < 1)
 			return (t_prob)-FLT_MAX;
+
 		nodecats  = m_pNodeNumCats[nnode];
 		nProbSize = nodecats;
 		for(i = 0; i < numPars; i++)
 			nProbSize *= m_pNodeNumCats[pars[i]];
+
 		memset(m_prob, 0, nProbSize*sizeof(t_prob));
 		prob2 = (t_prob*)CATNET_MALLOC(nProbSize*sizeof(t_prob));
+		if (!prob2) {
+			return (t_prob)-FLT_MAX;
+		}
 		memset(prob2, 0, nProbSize*sizeof(t_prob));
+
 		ncount = 0;
 		for (k = 0; k < nsamples; k++) {
 			listind = 0;
-			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, listind, m_pProbVect, -1, -1, 1, 1);			
+			_unlist_parent_probs(nnode, pars, numPars, pSamples+m_nline*k, 
+					     listind, m_pProbVect, -1, -1, 1, 1);
 			svalid = 1;
 			for(i = 0; i < nProbSize; i++)
 				if(m_pProbVect[i] < 0) /* NA */ {
@@ -430,6 +477,7 @@ public:
 public:
 	/* Each parentsPool[i] is numNodes long ! */
 	int search(SEARCH_PARAMETERS *pestim) {
+
 		if(!pestim)
 			return 0;
 		int numNodes = pestim->m_numNodes;
@@ -460,9 +508,13 @@ public:
 		if(!pestim->m_pNodeNumCats)
 			return CATNET_ERR_PARAM;
 		m_pNodeNumCats = (int*)CATNET_MALLOC(numNodes*sizeof(int));
+		if(!m_pNodeNumCats)
+			return CATNET_ERR_MEM;
 		memcpy(m_pNodeNumCats, pestim->m_pNodeNumCats, numNodes*sizeof(int));
 
 		pdiffcats = (int*)CATNET_MALLOC(numNodes*sizeof(int));
+		if(!pdiffcats)
+			return CATNET_ERR_MEM;
 
 		maxCategories = 0;
 		for(i = 0; i < numNodes; i++) 
@@ -485,20 +537,32 @@ public:
 		if(m_pProbVect)
 			CATNET_FREE(m_pProbVect);
 		m_pProbVect = (t_prob*) CATNET_MALLOC(nProbVect * sizeof(t_prob));
+		if(!m_pProbVect) {
+			CATNET_FREE(pdiffcats);
+			return CATNET_ERR_MEM;
+		}
 #endif
 		if(numSamples < 1 || !pSamples)
 			return CATNET_ERR_PARAM;
 
 		int *pSubClasses = 0;
 		int *pClasses = pestim->m_pClasses;
-		if(pClasses)
+		if(pClasses) {
 			pSubClasses = (int*)CATNET_MALLOC(numSamples*sizeof(int));
+		}
 
 		m_probSize = maxCategories;
-		for(i = 0; i < n_maxpars; i++)
+		for(i = 0; i < n_maxpars; i++) {
 			m_probSize *= maxCategories;
+		}
 
 		m_prob = (t_prob*)CATNET_MALLOC(m_probSize*sizeof(t_prob));
+		if(!m_prob) {
+			CATNET_FREE(pdiffcats);
+			if (pSubClasses)
+				CATNET_FREE(pSubClasses);
+			return CATNET_ERR_MEM;
+		}
 
 		nodecomplx = (maxCategories-1);
 		for(k = 0; k < n_maxpars; k++) 
@@ -506,39 +570,68 @@ public:
 		if(maxComplexity > numNodes*nodecomplx)
 			maxComplexity = numNodes*nodecomplx;
 
-		parset = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
-		idparset = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
+		parset    = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
+		idparset  = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
 		fixparset = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
+
+		if(!parset || !idparset || !fixparset) {
+			CATNET_FREE(pdiffcats);
+			if (pSubClasses)
+				CATNET_FREE(pSubClasses);
+			if (parset)
+				CATNET_FREE(parset);
+			if(idparset)
+				CATNET_FREE(idparset);
+			if(fixparset)
+				CATNET_FREE(fixparset);
+			return CATNET_ERR_MEM;
+		}
 
 		pSubSamples = 0;
 		if(perturbations)
 #ifdef DISCRETE_SAMPLE
 			pSubSamples = (t_sample*)CATNET_MALLOC(numNodes*numSamples*sizeof(t_sample));
 #else
-			pSubSamples = (t_prob*)CATNET_MALLOC(m_nline*numSamples*sizeof(t_prob));
+			pSubSamples =   (t_prob*)CATNET_MALLOC(m_nline*numSamples*sizeof(t_prob));
 #endif
 
 		if(m_numNodes != numNodes) {
 			/* initialize the first DAG */
 			DAG_LIST<t_prob, t_ind>::reset();
 			m_numNodes = numNodes;
-			m_numParSlots = (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
-			memset(m_numParSlots, 0, numNodes*sizeof(t_ind));
-			m_parSlots = (t_ind**)CATNET_MALLOC(numNodes*sizeof(t_ind*));
-			memset(m_parSlots, 0, numNodes*sizeof(t_ind*));
-			m_parLogliks = (t_prob**)CATNET_MALLOC(numNodes*sizeof(t_prob*));
-			memset(m_parLogliks, 0, numNodes*sizeof(t_prob*));
-			m_parComplx = (t_ind**)CATNET_MALLOC(numNodes*sizeof(t_ind*));
-			memset(m_parComplx, 0, numNodes*sizeof(t_ind*));
-			m_parSampleSize = (t_ind**)CATNET_MALLOC(numNodes*sizeof(t_ind*));
+
+			m_numParSlots   =   (t_ind*)CATNET_MALLOC(numNodes*sizeof(t_ind));
+			m_parSlots      =  (t_ind**)CATNET_MALLOC(numNodes*sizeof(t_ind*));
+			m_parLogliks    = (t_prob**)CATNET_MALLOC(numNodes*sizeof(t_prob*));
+			m_parComplx     =  (t_ind**)CATNET_MALLOC(numNodes*sizeof(t_ind*));
+			m_parSampleSize =  (t_ind**)CATNET_MALLOC(numNodes*sizeof(t_ind*));
+
+			if(!m_numParSlots || !m_parSlots || !m_parLogliks || 
+			   !m_parComplx || !m_parSampleSize) {
+				CATNET_FREE(pdiffcats);
+				if (pSubClasses)
+					CATNET_FREE(pSubClasses);
+				CATNET_FREE(parset);
+				CATNET_FREE(idparset);
+				CATNET_FREE(fixparset);
+				return CATNET_ERR_MEM;
+			}
+
+			memset(m_numParSlots,   0, numNodes*sizeof(t_ind));
+			memset(m_parSlots,      0, numNodes*sizeof(t_ind*));
+			memset(m_parLogliks,    0, numNodes*sizeof(t_prob*));
+			memset(m_parComplx,     0, numNodes*sizeof(t_ind*));
 			memset(m_parSampleSize, 0, numNodes*sizeof(t_ind*));
 
 			memset(pdiffcats, 0, numNodes*sizeof(int));
 			ndiffcats = 0;
 			for(i = 0; i < numNodes; i++) {
 				k = 1; 
-				if(ndiffcats > 0)
-					for(j = 0; j < ndiffcats; j++) if(pdiffcats[j] == m_pNodeNumCats[i]) k = 0;
+				if(ndiffcats > 0) {
+					for(j = 0; j < ndiffcats; j++) {
+						if(pdiffcats[j] == m_pNodeNumCats[i]) k = 0;
+					}
+				}
 				if(k) {
 					pdiffcats[ndiffcats] = m_pNodeNumCats[i];
 					ndiffcats++;
@@ -580,14 +673,26 @@ public:
 					}
 				}
 
-				m_numParSlots[nnode] = ndiffpars;
-				m_parSlots[nnode] = (t_ind*)CATNET_MALLOC(ndiffpars*n_maxpars*sizeof(t_ind));
-				memset(m_parSlots[nnode], 0, ndiffpars*n_maxpars*sizeof(t_ind));
-				m_parLogliks[nnode] = (t_prob*)CATNET_MALLOC(ndiffpars*sizeof(t_prob));
-				memset(m_parLogliks[nnode], 0, ndiffpars*sizeof(t_prob));
-				m_parComplx[nnode] = (t_ind*)CATNET_MALLOC(ndiffpars*sizeof(t_ind));
-				memset(m_parComplx[nnode], 0, ndiffpars*sizeof(t_ind));
-				m_parSampleSize[nnode] = (t_ind*)CATNET_MALLOC(ndiffpars*sizeof(t_ind));
+				m_numParSlots[nnode]   = ndiffpars;
+				m_parSlots[nnode]      =  (t_ind*)CATNET_MALLOC(ndiffpars*n_maxpars*sizeof(t_ind));
+				m_parLogliks[nnode]    = (t_prob*)CATNET_MALLOC(ndiffpars*sizeof(t_prob));
+				m_parComplx[nnode]     =  (t_ind*)CATNET_MALLOC(ndiffpars*sizeof(t_ind));
+				m_parSampleSize[nnode] =  (t_ind*)CATNET_MALLOC(ndiffpars*sizeof(t_ind));
+
+				if(!m_numParSlots[nnode] || !m_parSlots[nnode] || !m_parLogliks[nnode] || 
+			  	   !m_parComplx[nnode] || !m_parSampleSize[nnode]) {
+					CATNET_FREE(pdiffcats);
+					if (pSubClasses)
+						CATNET_FREE(pSubClasses);
+					CATNET_FREE(parset);
+					CATNET_FREE(idparset);
+					CATNET_FREE(fixparset);
+					return CATNET_ERR_MEM;
+				}
+
+				memset(m_parSlots[nnode],      0, ndiffpars*n_maxpars*sizeof(t_ind));
+				memset(m_parLogliks[nnode],    0, ndiffpars*sizeof(t_prob));
+				memset(m_parComplx[nnode],     0, ndiffpars*sizeof(t_ind));
 				memset(m_parSampleSize[nnode], 0, ndiffpars*sizeof(t_ind));
 
 				fixparsetsize = 0;
@@ -643,7 +748,7 @@ public:
 					m_parSlots[nnode][nd*n_maxpars+k] = -1;
 
 				// calculate the log-likelihood
-				if(perturbations) {
+				if(perturbations && pSubSamples) {
 					numSubSamples = 0;
 					for(j = 0; j < numSamples; j++) {
 						if(!perturbations[j * numNodes + nnode]) {
@@ -725,7 +830,9 @@ public:
 				  parsetsize++;
 				}
 			}
-			memcpy(parset + parsetsize, fixparset, fixparsetsize*sizeof(t_ind));
+
+			if (parset && fixparsetsize > 0)
+				memcpy(parset + parsetsize, fixparset, fixparsetsize*sizeof(t_ind));
 
 			maxpars = maxParentSet;
 			if(parSizes && parSizes[nnode] < maxParentSet)
@@ -762,18 +869,21 @@ public:
 				pcomblist = 0;
 				ncomblist = 0;
 				_combination_sets<t_ind>(pcomblist, ncomblist, 0, parset, parsetsize, 0, d - fixparsetsize);
+				if (!pcomblist)
+					break;
 
 			        if(fixparsetsize > 0) {
 			        	for(k = 0; k < ncomblist; k++) {
 			            		paux = (int*)CATNET_MALLOC(d*sizeof(int));
-						for(j = 0; j < fixparsetsize; j++)
-			            			paux[j] = fixparset[j];
-				        	if(pcomblist[k] && d > fixparsetsize) {
-			            			memcpy(paux + fixparsetsize, pcomblist[k], (d-fixparsetsize)*sizeof(int));
+						if (paux) {
+							for(j = 0; j < fixparsetsize; j++)
+				            			paux[j] = fixparset[j];
+					        	if(pcomblist[k] && d > fixparsetsize) {
+				            			memcpy(paux + fixparsetsize, pcomblist[k], (d-fixparsetsize)*sizeof(int));
+							}
 						}
-			            		if(pcomblist[k])
-			            			CATNET_FREE(pcomblist[k]); 
-			           		pcomblist[k] = paux;
+						if(pcomblist[k])
+			            			CATNET_FREE(pcomblist[k]); 				           							pcomblist[k] = paux;
 					}
 				}
 
@@ -781,6 +891,8 @@ public:
 					Rprintf("[%d]%d  ", d, ncomblist);
 
 				pCombFlags = (int*)CATNET_MALLOC(ncomblist*sizeof(int));
+				if (!pCombFlags)
+					break;
 				memset(pCombFlags, 0, ncomblist*sizeof(int));
 
 				while(1) {
@@ -797,14 +909,15 @@ public:
 					if(ncomb >= ncomblist)
 						break;
 
-					memcpy(idparset, pcomblist[ncomb], d*sizeof(t_ind));
+					if (pcomblist[ncomb] && d > 0)
+						memcpy(idparset, pcomblist[ncomb], d*sizeof(t_ind));
 					nodecomplx = (m_pNodeNumCats[nnode]-1);
 					for(k = 0; k < d; k++) 
 						nodecomplx *= m_pNodeNumCats[idparset[k]];
 
 					/* identify all par combinations with complexity `nodecomplx' */
 					pCombFlags[ncomb] = 2;
-					if(ncomb < ncomblist-1)
+					if(ncomb < ncomblist-1) {
 						for(i = ncomb+1; i < ncomblist; i++) {
 							j = (m_pNodeNumCats[nnode]-1);
 							for(k = 0; k < d; k++) 
@@ -812,10 +925,8 @@ public:
 							if(j == nodecomplx)
 								pCombFlags[i] = 2;
 						}
-//printf("pCombFlags = ");
-//for(i = 0; i < ncomblist; i++)
-//printf(" %d ", pCombFlags[i]);
-//printf("\n");
+					}
+
 					fMaxLogLik = -FLT_MAX;
 					maxSubSamples = 0;
 					i = ncomb;
@@ -823,7 +934,7 @@ public:
 	
 						if(pCombFlags[i] != 2)
 							continue;
-						if(perturbations) {
+						if(perturbations && pSubSamples) {
 							numSubSamples = 0;
 							for(j = 0; j < numSamples; j++) {
 								if(!perturbations[j * numNodes + nnode]) {
@@ -852,7 +963,8 @@ public:
 							fMaxLogLik = fLogLik;
 							maxSubSamples = numSubSamples;
 							ncomb = i;
-							memcpy(idparset, pcomblist[i], d*sizeof(t_ind));
+							if (pcomblist[i] && d > 0)
+								memcpy(idparset, pcomblist[i], d*sizeof(t_ind));
 						}
 					} /* for(; i < ncomblist; i++) */
 
@@ -867,7 +979,7 @@ public:
 
 					/* pDagPars are ordered in increasing complexity */
 					pDagPars = m_dagPars;
-					pCurDag = pCurDagList;
+					pCurDag  = pCurDagList;
 					bSavePars = 0;
 int kk=0;
 					while(pCurDag) {
@@ -927,23 +1039,11 @@ kk++;
 						m_parLogliks[nnode][nd] = fMaxLogLik; 
 						m_parComplx[nnode][nd] = nodecomplx; 
 						m_parSampleSize[nnode][nd] = maxSubSamples;
-						memcpy(&m_parSlots[nnode][nd*n_maxpars], idparset, d*sizeof(t_ind)); 
+						if (idparset && d > 0)
+							memcpy(&m_parSlots[nnode][nd*n_maxpars], idparset, d*sizeof(t_ind)); 
 						for(k = d; k < n_maxpars; k++)
 							m_parSlots[nnode][nd*n_maxpars+k] = -1;
-//printf("parset[%d][%f][%d][%d], k= %d\n", nnode+1, fMaxLogLik, nodecomplx, nd, kk);
-//if(nnode==23) {
-//printf("parset[%d][%f][%d] = ", nnode+1, fMaxLogLik, nodecomplx);
-//for(k = 0; k < n_maxpars; k++)
-//	printf("%d ", m_parSlots[nnode][nd*n_maxpars+k]);
-//printf("\n");
-//}
 					}
-
-					//j = 0;
-					//for(i = 0; i < ncomblist; i++)
-					//	if(pCombFlags[i] == 2) j++;
-					//if(j > 2)
-					//printf("ncomb = %d, swallow %d\n", ncomb, j);
 
 				} /* while(1) */
 

@@ -63,6 +63,9 @@ public:
 			return 0;
 
 		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		if (!pnodesample)
+			return 0;
+
 		pnodepars = m_parents[nnode];
 		ncount = 0;
 		for (j = 0; j < nsamples; j++) {
@@ -100,6 +103,9 @@ public:
 			return 0;
 
 		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		if (!pnodesample)
+			return 0;
+
 		m_loglik = 0;
 		for (i = 0; i < m_numNodes; i++) {
 			if(!m_pProbLists[i])
@@ -148,10 +154,16 @@ public:
 		if(!psamples || nsamples < 1)
 			return 0;
 
+		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		if (!pnodesample)
+			return 0;
 		ploglik = (t_prob*) CATNET_MALLOC(m_numNodes * sizeof(t_prob));
+		if (!ploglik) {
+			CATNET_FREE(pnodesample);
+			return 0;
+		}
 		memset(ploglik, 0, m_numNodes * sizeof(t_prob));
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
 		for (i = 0; i < m_numNodes; i++) {
 			if(!m_pProbLists[i])
 				continue;
@@ -169,7 +181,6 @@ public:
 				pnodeprob = m_pProbLists[i]->find_slot(0, pnodesample, 0);
 				if(!pnodeprob)
 					continue;
-//Rprintf("[%d][%d]: ",i, j);
 				samp = psamples[j * m_numNodes + i];
 				if (pnodeprob && samp >= 0 && samp < m_numCategories[i]) {
 					if(pnodeprob[samp] > 0)
@@ -178,11 +189,9 @@ public:
 						ploglik[i] = (t_prob)-FLT_MAX;
 						break;
 					}
-//Rprintf("(%f, %f) ", ploglik[i], pnodeprob[samp]);
 					ncount++;
 				}
 			}
-//Rprintf("count = %d\n", ncount);
 			if(ncount > 1 && ploglik[i] > -FLT_MAX)
 				ploglik[i] /= (t_prob)ncount;
 		}
@@ -199,10 +208,16 @@ public:
 		if(!psamples || nsamples < 1)
 			return 0;
 
+		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		if (!pnodesample)
+			return 0;
 		ploglik = (t_prob*) CATNET_MALLOC(nsamples * sizeof(t_prob));
+		if (!ploglik) {
+			CATNET_FREE(pnodesample);
+			return 0;
+		}
 		memset(ploglik, 0, nsamples * sizeof(t_prob));
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
 		for (i = 0; i < m_numNodes; i++) {
 			if(!m_pProbLists[i])
 				continue;
@@ -251,6 +266,9 @@ public:
 		loglik = 0;
 
 		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));	
+		if (!pnodesample)
+			return 0;
+
 		pnodepars = m_parents[nnode];
 		nodepars = m_numParents[nnode];
 
@@ -300,12 +318,14 @@ public:
 		}
 
 		if(!m_pProbLists[nnode]) {
-			// error
 			return (t_prob)-FLT_MAX;
 		}
 		m_pProbLists[nnode]->set_zero();
 
 		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		if (!pnodesample)
+			return 0;
+
 		pnodepars = m_parents[nnode];
 		ncount = 0;
 		for (j = 0; j < nsamples; j++) {
@@ -365,6 +385,9 @@ public:
 		pClassProb->set_zero();
 
 		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		if (!pnodesample)
+			return 0;
+
 		pnodepars = m_parents[nnode];
 		ncount = 0;
 		nclasscount = 0;

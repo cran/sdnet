@@ -34,22 +34,26 @@
 c_thread::c_thread() {
 	m_hThread = NULL;
 	InitializeCriticalSection(&m_thread_cs);
-	m_thread_attr.nLength = sizeof(SECURITY_ATTRIBUTES);
+
+	m_thread_attr.nLength              = sizeof(SECURITY_ATTRIBUTES);
 	m_thread_attr.lpSecurityDescriptor = DEFAULT_SECURITY;
-	m_thread_attr.bInheritHandle = FALSE;
+	m_thread_attr.bInheritHandle       = FALSE;
+
 	m_hStopThreadEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	m_hJobDoneEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	m_hJobDoneEvent    = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
 c_thread::c_thread(THREAD_PROC ThreadProc, LPVOID lpParam) {
 
 	m_hThread = NULL;
 	InitializeCriticalSection(&m_thread_cs);
-	m_thread_attr.nLength = sizeof(SECURITY_ATTRIBUTES);
+
+	m_thread_attr.nLength              = sizeof(SECURITY_ATTRIBUTES);
 	m_thread_attr.lpSecurityDescriptor = DEFAULT_SECURITY;
-	m_thread_attr.bInheritHandle = FALSE;
+	m_thread_attr.bInheritHandle       = FALSE;
+
 	m_hStopThreadEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	m_hJobDoneEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	m_hJobDoneEvent    = CreateEvent(NULL, TRUE, FALSE, NULL);
 	
 	_start_thread(ThreadProc, lpParam);
 }

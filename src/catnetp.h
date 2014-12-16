@@ -117,6 +117,8 @@ public:
 		for(i = 0; i < nodepars; i++) 
 			ncats *= m_numCategories[pnodepars[i]];
 		plist = (t_prob*) CATNET_MALLOC(ncats * sizeof(t_prob));
+		if (!plist)
+			return 0;
 		
 		nline = 0;
 		for(j = 0; j < m_numNodes; j++) 
@@ -182,7 +184,9 @@ public:
 		for(i = 0; i < nodepars; i++) 
 			ncats *= m_numCategories[pnodepars[i]];
 		plist = (t_prob*) CATNET_MALLOC(ncats * sizeof(t_prob));
-		
+		if (!plist)
+			return 0;
+
 		nline = 0;
 		for(j = 0; j < m_numNodes; j++) 
 			nline += m_numCategories[j];
@@ -253,17 +257,24 @@ public:
 		for(i = 0; i < m_maxParents; i++) 
 			ncats *= m_maxCategories;
 		plist = (t_prob*) CATNET_MALLOC(ncats * sizeof(t_prob));
-		
+		if (!plist)
+			return 0;
+
 		nline = 0;
 		for(j = 0; j < m_numNodes; j++) 
 			nline += m_numCategories[j];
 
 		ploglik = (t_prob*) CATNET_MALLOC(m_numNodes * sizeof(t_prob));
+		if (!ploglik) {
+			CATNET_FREE(plist);
+			return 0;
+		}
 		memset(ploglik, 0, m_numNodes * sizeof(t_prob));
 
 		for (nnode = 0; nnode < m_numNodes; nnode++) {
 			if(!m_pProbLists[nnode])
 				continue;
+
 			pnodepars = m_parents[nnode];
 			nodepars = m_numParents[nnode];
 			pnodeprob = m_pProbLists[nnode]->pProbs;
@@ -329,12 +340,19 @@ public:
 		for(i = 0; i < m_maxParents; i++) 
 			ncats *= m_maxCategories;
 		plist = (t_prob*) CATNET_MALLOC(ncats * sizeof(t_prob));
-		
+		if (!plist) {
+			return 0;
+		}
+
 		nline = 0;
 		for(j = 0; j < m_numNodes; j++) 
 			nline += m_numCategories[j];
 
 		ploglik = (t_prob*) CATNET_MALLOC(nsamples * sizeof(t_prob));
+		if (!ploglik) {
+			CATNET_FREE(plist);
+			return 0;
+		}
 		memset(ploglik, 0, nsamples * sizeof(t_prob));
 
 		for (nnode = 0; nnode < m_numNodes; nnode++) {
@@ -416,6 +434,9 @@ public:
 		for(i = 0; i < nodepars; i++) 
 			ncats *= m_numCategories[pnodepars[i]];
 		plist = (t_prob*) CATNET_MALLOC(ncats * sizeof(t_prob));
+		if (!plist) {
+			return 0;
+		}
 
 		nline = 0;
 		for(j = 0; j < m_numNodes; j++) 
@@ -473,6 +494,10 @@ public:
 		for(i = 0; i < nodepars; i++) 
 			ncats *= m_numCategories[pnodepars[i]];
 		plist = (t_prob*) CATNET_MALLOC(ncats * sizeof(t_prob));
+		if (!plist) {
+			delete pPriorProb;
+			return 0;
+		}
 
 		nline = 0;
 		for(j = 0; j < m_numNodes; j++) 

@@ -20,7 +20,7 @@
 /*
  * rcatnet.cpp
  *
- *  Created on: Sep 21, 2009
+ *  Created on: Sep 21, 2011
  *      Author: nbalov
  */
 
@@ -34,30 +34,30 @@ RCATNET_CLASS::RCATNET_CLASS(SEXP cnet) {
 	double *pvec;
 	int nnode, i, nvec, *pn;
 	char const *pstr;
-	//char str[256];
 
 	SEXP rname, rnodes, rparents, rcatlist, rproblist, pf, nodepars, nodeproblist, pint, rnodeprob;
 
 	if(!isS4(cnet))
 		return;
 
-	rname = GET_SLOT(cnet, install("objectName"));
-	rnodes = GET_SLOT(cnet, install("nodes"));
-	rparents = GET_SLOT(cnet, install("pars"));
-	rcatlist = GET_SLOT(cnet, install("cats"));
+	rname     = GET_SLOT(cnet, install("objectName"));
+	rnodes    = GET_SLOT(cnet, install("nodes"));
+	rparents  = GET_SLOT(cnet, install("pars"));
+	rcatlist  = GET_SLOT(cnet, install("cats"));
 	rproblist = GET_SLOT(cnet, install("probs"));
 
-	if(rnodes == R_NilValue || rparents == R_NilValue || rcatlist == R_NilValue || rproblist == R_NilValue) {
+	if(rnodes == R_NilValue || rparents == R_NilValue || 
+	   rcatlist == R_NilValue || rproblist == R_NilValue) {
 		return;
 	}
 
-	PROTECT(rname = AS_CHARACTER(rname));
-	PROTECT(rnodes = AS_LIST(rnodes));
-	PROTECT(rparents = AS_LIST(rparents));
-	PROTECT(rcatlist = AS_LIST(rcatlist));
+	PROTECT(rname     = AS_CHARACTER(rname));
+	PROTECT(rnodes    = AS_LIST(rnodes));
+	PROTECT(rparents  = AS_LIST(rparents));
+	PROTECT(rcatlist  = AS_LIST(rcatlist));
 	PROTECT(rproblist = AS_LIST(rproblist));
 
-	pint = GET_SLOT(cnet, install("numnodes"));
+	pint       = GET_SLOT(cnet, install("numnodes"));
 	m_numNodes = INTEGER_POINTER(pint)[0];
 
 	pint = GET_SLOT(cnet, install("maxpars"));
@@ -74,15 +74,40 @@ RCATNET_CLASS::RCATNET_CLASS(SEXP cnet) {
 		warning("length(rproblist) != m_numNodes");
 		return;
 	}
-	m_nodeNames = (char**) CATNET_MALLOC(m_numNodes * sizeof(char*));
-	memset(m_nodeNames, 0, m_numNodes * sizeof(char*));
-	m_numParents = (int*) CATNET_MALLOC(m_numNodes * sizeof(int));
-	memset(m_numParents, 0, m_numNodes * sizeof(int));
-	m_parents = (int**) CATNET_MALLOC(m_numNodes * sizeof(int*));
-	memset(m_parents, 0, m_numNodes * sizeof(int*));
-	m_numCategories = (int*) CATNET_MALLOC(m_numNodes * sizeof(int));
-	memset(m_numCategories, 0, m_numNodes * sizeof(int));
+
+	m_nodeNames     = (char**)CATNET_MALLOC(m_numNodes * sizeof(char*));
+	m_numParents    =   (int*)CATNET_MALLOC(m_numNodes * sizeof(int));
+	m_parents       =  (int**)CATNET_MALLOC(m_numNodes * sizeof(int*));	
+	m_numCategories =   (int*)CATNET_MALLOC(m_numNodes * sizeof(int));
+
 	m_pProbLists = (PROB_LIST<double>**) CATNET_MALLOC(m_numNodes * sizeof(PROB_LIST<double>*));
+
+	if (!m_nodeNames || !m_numParents || !m_parents || 
+	    !m_numCategories || !m_pProbLists) {
+		if (m_nodeNames)
+			CATNET_FREE(m_nodeNames);
+		m_nodeNames = 0;
+		if (m_numParents)
+			CATNET_FREE(m_numParents);
+		m_numParents = 0;
+		if (m_parents)
+			CATNET_FREE(m_parents);
+		m_parents = 0;
+		if (m_numCategories)
+			CATNET_FREE(m_numCategories);
+		m_numCategories = 0;
+		if (m_pProbLists)
+			CATNET_FREE(m_pProbLists);
+		m_pProbLists = 0;
+		UNPROTECT(5);
+		return;
+	}
+
+	memset(m_nodeNames,     0, m_numNodes * sizeof(char*));
+	memset(m_numParents,    0, m_numNodes * sizeof(int));
+	memset(m_parents,       0, m_numNodes * sizeof(int*));
+	memset(m_numCategories, 0, m_numNodes * sizeof(int));
+
 	for (i = 0; i < m_numNodes; i++)
 		m_pProbLists[i] = 0;
 
@@ -91,25 +116,24 @@ RCATNET_CLASS::RCATNET_CLASS(SEXP cnet) {
 		m_nodeNames[nnode] = 0;
 		if(IS_VECTOR(pf)) {
 			pstr = CHAR(asChar(pf));
-			if(strlen(pstr) >= MAX_NODE_NAME) {
+			if (pstr) {
 				m_nodeNames[nnode] = (char*) CATNET_MALLOC((strlen(pstr)+1) * sizeof(char));
-				strcpy(m_nodeNames[nnode], pstr);
-			}
-			else {
-				m_nodeNames[nnode] = (char*) CATNET_MALLOC(MAX_NODE_NAME * sizeof(char));
-				sprintf(m_nodeNames[nnode], "N%d", nnode);
+				if (m_nodeNames[nnode])
+					strcpy(m_nodeNames[nnode], pstr);
 			}
 		}
 
 		pf = VECTOR_ELT(rparents, nnode);
 		m_numParents[nnode] = 0;
-		m_parents[nnode] = 0;
+		m_parents[nnode]    = 0;
 		if (IS_VECTOR(pf)) {
 			m_numParents[nnode] = length(pf);
 			pn = INTEGER_POINTER(pf);
 			m_parents[nnode] = (int*) CATNET_MALLOC(m_numParents[nnode] * sizeof(int));
-			for(i = 0; i < m_numParents[nnode]; i++) {
-				m_parents[nnode][i] = pn[i] - 1;
+			if (m_parents[nnode]) {
+				for(i = 0; i < m_numParents[nnode]; i++) {
+					m_parents[nnode][i] = pn[i] - 1;
+				}
 			}
 		}
 
@@ -187,9 +211,10 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 		}
 		PROTECT(ppars = NEW_INTEGER(m_numParents[node]));
 		pn = INTEGER_POINTER(ppars);
-		for(i = 0; i < m_numParents[node]; i++)
+		for(i = 0; i < m_numParents[node]; i++) {
 			// remember to increase the index by 1
 			pn[i] = m_parents[node][i] + 1;
+		}
 		SET_VECTOR_ELT(plist, node, ppars);
 		UNPROTECT(1);
 	}
@@ -227,14 +252,18 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 				continue;
 			PROTECT(pnodeprobs = NEW_NUMERIC(m_pProbLists[node]->nProbSize));
 			pf = NUMERIC_POINTER(pnodeprobs);
-			memcpy(pf, m_pProbLists[node]->pProbs, m_pProbLists[node]->nProbSize * sizeof(double));
+			if (pf && m_pProbLists[node]->pProbs)
+				memcpy(pf, m_pProbLists[node]->pProbs, 
+					m_pProbLists[node]->nProbSize * sizeof(double));
 			SET_VECTOR_ELT(plist, node, pnodeprobs);
 			UNPROTECT(1);
 		}
 	}
 	else { 
 		for(node = 0; node < m_numNodes; node++) {
-			memset(pslotcats, 0, m_maxParents*sizeof(int));
+			if (pslotcats) {
+				memset(pslotcats, 0, m_maxParents*sizeof(int));
+			}
 			pnodeprobs = genProbList(node, 0, pslotcats);
 			SET_VECTOR_ELT(plist, node, pnodeprobs);
 			if(pnodeprobs != R_NilValue)
@@ -242,15 +271,17 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 		}
 	}
 	SET_SLOT(cnet, install("probs"), plist);
-	UNPROTECT(1);
-	CATNET_FREE(pslotcats);
+	UNPROTECT(1); // plist
+
+	if (pslotcats)
+		CATNET_FREE(pslotcats);
 
 	SET_SLOT(cnet, install("meta"), mkString("catNetwork object"));
 
 	PROTECT(pint = NEW_INTEGER(1));
 	INTEGER_POINTER(pint)[0] = complexity();
 	SET_SLOT(cnet, install("complx"), pint);
-	UNPROTECT(1);
+	UNPROTECT(1); // pint
 	
 	PROTECT(pint = NEW_NUMERIC(1));
 	floglik = loglik();
@@ -259,7 +290,7 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 	else
 		NUMERIC_POINTER(pint)[0] = R_NegInf;
 	SET_SLOT(cnet, install("loglik"), pint);
-	UNPROTECT(1);
+	UNPROTECT(1); // pint
 
 	PROTECT(pint = NEW_INTEGER(m_numNodes));
 	for(node = 0; node < m_numNodes; node++) {
@@ -267,9 +298,10 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 			INTEGER_POINTER(pint)[node] = m_pProbLists[node]->sampleSize;
 	}
 	SET_SLOT(cnet, install("nodeSampleSizes"), pint);
-	UNPROTECT(1);
+	UNPROTECT(1); // pint
 
 	UNPROTECT(1); // cnet
+
 	return cnet;
 }
 
@@ -305,9 +337,10 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	pint = GET_SLOT(rDagEval, install("maxcats"));
 	m_maxCategories = INTEGER_POINTER(pint)[0];
 
-	if(m_numNodes < 0 || m_maxParents < 0 || m_maxCategories < 0 || m_numNodes > 1e16 || m_maxParents > 1e4 || m_maxCategories > 1e4)
+	if(m_numNodes < 0 || m_maxParents < 0 || m_maxCategories < 0 || 
+	   m_numNodes > 1e16 || m_maxParents > 1e4 || m_maxCategories > 1e4) {
 		CATNET_PARAM_ERR();
-	//printf("m_numNodes = %d, m_maxParents = %d, m_maxCategories = %d\n", m_numNodes, m_maxParents, m_maxCategories);
+	}
 
 	/* initialize the CATNET attributes */
 	init(m_numNodes, m_maxParents, m_maxCategories);
@@ -322,7 +355,8 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 		if(length(rNodeNames) > 0) {
 			pstr = CHAR(asChar(rNodeNames));
 			m_nodeNames[node] = (char*)CATNET_MALLOC((strlen(pstr)+1) * sizeof(char));
-			strcpy(m_nodeNames[node], pstr);
+			if (m_nodeNames[node] && pstr)
+				strcpy(m_nodeNames[node], pstr);
 		}
 	}
 	UNPROTECT(1);
@@ -344,12 +378,17 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	PROTECT(ppars = AS_INTEGER(ppars));
 	nIntBuff = length(ppars);
 
-	pIntBuff = (int*)CATNET_MALLOC(nIntBuff*sizeof(int));
-	memcpy(pIntBuff, INTEGER_POINTER(ppars), nIntBuff*sizeof(int));
-	UNPROTECT(2);
-
+	pIntBuff  = (int*)CATNET_MALLOC(nIntBuff*sizeof(int));
 	pParIndex = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
+
+	if (!pIntBuff || !pParIndex) {
+		CATNET_PARAM_ERR();
+	}
+
+	memcpy(pIntBuff, INTEGER_POINTER(ppars), nIntBuff*sizeof(int));
 	memset(pParIndex, 0, m_numNodes*sizeof(int));
+
+	UNPROTECT(2); // ppars & plist
 
 	nbits = *((int*)pIntBuff);
 	if(nbits <= 8) {
@@ -393,8 +432,13 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	}
 
 	pParBuff = (int*)CATNET_MALLOC(m_maxParents*sizeof(int));
+	if (!pParBuff) {
+		CATNET_FREE(pIntBuff);
+		CATNET_FREE(pParIndex);
+		CATNET_PARAM_ERR();
+	}
 
-	plist = GET_SLOT(rDagEval, install("parSlots"));
+ 	plist = GET_SLOT(rDagEval, install("parSlots"));
 	if(length(plist) != m_numNodes)
 		CATNET_ERR("Wrong parSlots slot");
 	PROTECT(plist = AS_LIST(plist));
@@ -405,26 +449,21 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 			sprintf(str, "Wrong parSlots for node %d", node+1);
 			CATNET_ERR(str);
 		}
-		memcpy(pParBuff, INTEGER_POINTER(ppars) + pParIndex[node]*m_maxParents, m_maxParents*sizeof(int));
+		if (m_maxParents > 0)
+			memcpy(pParBuff, INTEGER_POINTER(ppars) + pParIndex[node]*m_maxParents, m_maxParents*sizeof(int));
 		UNPROTECT(1);
 		i = 0;
 		while(pParBuff[i] != 0 && i < m_maxParents) 
 			i++;
 		m_numParents[node] = i;
 
-//printf("m_numParents[%d] = %d\n", node, m_numParents[node]);
 		if(m_numParents[node] <= 0) 
 			continue;
 		m_parents[node] = (int*)CATNET_MALLOC(m_numParents[node] * sizeof(int));
-		memcpy(m_parents[node], pParBuff, m_numParents[node]*sizeof(int));
+		if (m_parents[node] && m_numParents[node] > 0)
+			memcpy(m_parents[node], pParBuff, m_numParents[node]*sizeof(int));
 	}
-	UNPROTECT(1);
-
-	/*for(node = 0;  node < m_numNodes; node++)
-		if(m_numParents[node] < 0 || m_numParents[node] > m_maxParents) {
-			sprintf(str, "Wrong number of parents for node %d", node+1);
-			CATNET_ERR(str);
-		}*/
+	UNPROTECT(1); // plist
 
 	CATNET_FREE(pParBuff);
 	pParBuff = 0;
@@ -468,7 +507,8 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 			continue;
 		}
 		PROTECT(ppars = NEW_INTEGER(m_numParents[node]));
-		memcpy(INTEGER_POINTER(ppars), m_parents[node], m_numParents[node]*sizeof(int));
+		if (m_parents[node] && m_numParents[node] > 0)
+			memcpy(INTEGER_POINTER(ppars), m_parents[node], m_numParents[node]*sizeof(int));
 		SET_VECTOR_ELT(plist, node, ppars);
 		UNPROTECT(1);
 	}
@@ -548,7 +588,8 @@ SEXP RCATNET_CLASS::genProbList(int node, int paridx, int *pcats) {
 		pslot = m_pProbLists[node]->find_slot(0, pcats, 0);
 		PROTECT(problist = NEW_NUMERIC(m_numCategories[node]));
 		pp = NUMERIC_POINTER(problist);
-		memcpy(pp, pslot, m_numCategories[node]*sizeof(double));
+		if (pp && pslot && m_numCategories[node] > 0)
+			memcpy(pp, pslot, m_numCategories[node]*sizeof(double));
 		return problist;
 	}
 
@@ -607,10 +648,18 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 		}
 	}
 
+	GetRNGstate();
 	for(k = 0; k < m_numNodes; k++) {
 		nnode = porder[k];
 		pnodepars = m_parents[nnode];
 		pProbList = (PROB_LIST<double>*)getNodeProb(nnode);
+		if (!pProbList) {
+			if (pnodesample)
+				CATNET_FREE(pnodesample);
+			CATNET_FREE(pSamples);
+			CATNET_FREE(porder);
+			return R_NilValue;
+		}
 
 		for (j = 0; j < numsamples; j++) {
 
@@ -629,7 +678,7 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 			}
 			pnodeprob = pProbList->find_slot(0, pnodesample, 0);
 
-			u = (double)rand() / (double)RAND_MAX;
+			u = (double)unif_rand();
 			v = 0;
 			for(i = 0; i < m_numCategories[nnode]; i++) {
 				v += pnodeprob[i];
@@ -643,9 +692,16 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	k = (int)(fNaRate*m_numNodes);
 	if(k > 0 && k < m_numNodes) {
 		int ii, fmax, *paux = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
+		if (!paux) {
+			if (pnodesample)
+				CATNET_FREE(pnodesample);
+			CATNET_FREE(pSamples);
+			CATNET_FREE(porder);
+			return R_NilValue;
+		}
 		for (j = 0; j < numsamples; j++) {
 			for(ii = 0; ii < m_numNodes; ii++)
-				paux[ii] = (int)rand();
+				paux[ii] = (int)(RAND_MAX*unif_rand());
 			for(i = 0; i < k; i++) {
 				nnode = 0;
 				fmax = -(int)RAND_MAX;
@@ -663,6 +719,7 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 		}
 		CATNET_FREE(paux);
 	}
+	PutRNGstate();
 
 	if(!isNull(rPerturbations))
 		UNPROTECT(1);
@@ -675,7 +732,8 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	// output the new matrix
 	PROTECT(rsamples = NEW_INTEGER(m_numNodes * numsamples));
 	pRsamples = (int*)INTEGER_POINTER(rsamples);
-	memcpy(pRsamples, pSamples, m_numNodes*numsamples*sizeof(int));
+	if (pRsamples && pSamples)
+		memcpy(pRsamples, pSamples, m_numNodes*numsamples*sizeof(int));
 	UNPROTECT(1);
 
 	CATNET_FREE(pSamples);

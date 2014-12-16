@@ -108,6 +108,9 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 	if(m_pRorderInverse)
 		CATNET_FREE(m_pRorderInverse);
 	m_pRorderInverse = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
+	if (!m_pRorder || !m_pRorderInverse) {
+		CATNET_MEM_ERR();
+	}
 
 	PROTECT(rOrder = AS_INTEGER(rOrder));
 	if(length(rOrder) < m_numNodes) {
@@ -137,6 +140,9 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 		!isNull(rParentsPool), !isNull(rFixedParentsPool), 
 		!isNull(rMatEdgeLiks), 0, 
 		NULL, this, 0, 0, hasClasses, klmode);
+	if (!m_pSearchParams) {
+		CATNET_MEM_ERR();
+	}
 
 	if(!isNull(rParentSizes)) {
 		pParentSizes = m_pSearchParams->m_pParentSizes;
@@ -177,11 +183,8 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 		pClasses = (int*)m_pSearchParams->m_pClasses;
 		PROTECT(rClasses = AS_INTEGER(rClasses));
 		pRclasses = INTEGER(rClasses);
-		memcpy(pClasses, pRclasses, m_numSamples*sizeof(int));
-		//printf("classes: ");
-		//for(i = 0; i < m_numSamples; i++)
-		//	printf("%d  ", pClasses[i]);
-		//printf("\n");
+		if (pClasses && pRclasses)
+			memcpy(pClasses, pRclasses, m_numSamples*sizeof(int));
 		UNPROTECT(1); // rClasses
 	}
 
@@ -193,8 +196,10 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 			if(isVector(rnodecat) && len > 0) {
 				m_pSearchParams->m_pNodeNumCats[i] = len;
 				m_pSearchParams->m_pNodeCats[i] = (int*)CATNET_MALLOC(len*sizeof(int));
-				for(j = 0; j < len; j++)
-					m_pSearchParams->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+				if (m_pSearchParams->m_pNodeCats[i]) {
+					for(j = 0; j < len; j++)
+						m_pSearchParams->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+				}
 			}
 		}
 		UNPROTECT(1);
@@ -210,18 +215,20 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 			if(isVector(rparpool) && len > 0 && len <= m_numNodes) {
 				parentsPool[i] = (int*)CATNET_MALLOC((len+1)*sizeof(int));
 				pPool = INTEGER(rparpool);
-				for(j = 0; j < len; j++) {
-					if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
-						for(k = 0; k < m_numNodes; k++)
-							if(pPool[j] == m_pRorder[k])
-								break;
-						if(k < m_numNodes)
-							parentsPool[i][j] = k;
-						else
-							parentsPool[i][j] = -1;
+				if (parentsPool[i] && pPool) {
+					for(j = 0; j < len; j++) {
+						if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
+							for(k = 0; k < m_numNodes; k++)
+								if(pPool[j] == m_pRorder[k])
+									break;
+							if(k < m_numNodes)
+								parentsPool[i][j] = k;
+							else
+								parentsPool[i][j] = -1;
+						}
 					}
+					parentsPool[i][len] = -1;
 				}
-				parentsPool[i][len] = -1;
 				if(m_pSearchParams->m_maxParentsPool < len)
 					m_pSearchParams->m_maxParentsPool = len;
 			}
@@ -241,18 +248,20 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 			 	if(maxParentSet < len)
 			    		maxParentSet = len;
 				pPool = INTEGER(rparpool);
-				for(j = 0; j < len; j++) {
-					if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
-						for(k = 0; k < m_numNodes; k++)
-							if(pPool[j] == m_pRorder[k])
-								break;
-						if(k < m_numNodes)
-							fixedParentsPool[i][j] = k;
-						else
-							fixedParentsPool[i][j] = -1;
+				if (fixedParentsPool[i] && pPool) {
+					for(j = 0; j < len; j++) {
+						if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
+							for(k = 0; k < m_numNodes; k++)
+								if(pPool[j] == m_pRorder[k])
+									break;
+							if(k < m_numNodes)
+								fixedParentsPool[i][j] = k;
+							else
+								fixedParentsPool[i][j] = -1;
+						}
 					}
+					fixedParentsPool[i][len] = -1;
 				}
-				fixedParentsPool[i][len] = -1;
 				if(m_pSearchParams->m_maxParentsPool < len)
 					m_pSearchParams->m_maxParentsPool = len;
 			}
@@ -262,7 +271,7 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 
 	if(!isNull(rMatEdgeLiks) && m_pSearchParams->m_matEdgeLiks) {
 		PROTECT(rMatEdgeLiks = AS_NUMERIC(rMatEdgeLiks));
-		matEdgeLiks = m_pSearchParams->m_matEdgeLiks;
+		matEdgeLiks  = m_pSearchParams->m_matEdgeLiks;
 		pMatEdgeLiks = REAL(rMatEdgeLiks);
 		for(j = 0; j < m_numNodes; j++) {
 			for(i = 0; i < m_numNodes; i++) {
@@ -369,11 +378,6 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 	maxComplexity = INTEGER_POINTER(rMaxComplexity)[0];
 	UNPROTECT(1);
 
-	//PROTECT(rUseCache = AS_LOGICAL(rUseCache));
-	//int bUseCache = LOGICAL(rUseCache)[0];
-	//Rprintf("bUseCache = %d\n", bUseCache);
-	//UNPROTECT(1);
-
 	PROTECT(rEcho = AS_LOGICAL(rEcho));
 	echo = LOGICAL(rEcho)[0];
 	UNPROTECT(1);
@@ -405,6 +409,9 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 	if(m_pRorder)
 		CATNET_FREE(m_pRorder);
 	m_pRorder = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
+	if (!m_pRorder) {
+		CATNET_MEM_ERR();
+	}
 
 	PROTECT(rOrder = AS_INTEGER(rOrder));
 	if(length(rOrder) < m_numNodes) {
@@ -427,6 +434,9 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 		!isNull(rParentsPool), !isNull(rFixedParentsPool), 
 		!isNull(rMatEdgeLiks), 0, 
 		NULL, this, sampleline, 0, hasClasses, klmode);
+	if (!m_pSearchParams) {
+		CATNET_MEM_ERR();
+	}
 
 	pPerturbations = 0;
 	if(!isNull(rPerturbations)) {
@@ -459,18 +469,20 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 			if(isVector(rparpool) && len > 0 && len <= m_numNodes) {
 				parentsPool[i] = (int*)CATNET_MALLOC((len+1)*sizeof(int));
 				pPool = INTEGER(rparpool);
-				for(j = 0; j < len; j++) {
-					if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
-						for(k = 0; k < m_numNodes; k++)
-							if(pPool[j] == m_pRorder[k])
-								break;
-						if(k < m_numNodes)
-							parentsPool[i][j] = k;
-						else
-							parentsPool[i][j] = -1;
+				if (parentsPool[i] && pPool) {
+					for(j = 0; j < len; j++) {
+						if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
+							for(k = 0; k < m_numNodes; k++)
+								if(pPool[j] == m_pRorder[k])
+									break;
+							if(k < m_numNodes)
+								parentsPool[i][j] = k;
+							else
+								parentsPool[i][j] = -1;
+						}
 					}
+					parentsPool[i][len] = -1;
 				}
-				parentsPool[i][len] = -1;
 				if(m_pSearchParams->m_maxParentsPool < len)
 					m_pSearchParams->m_maxParentsPool = len;
 			}
@@ -490,18 +502,20 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 			 	if(maxParentSet < len)
 			    		maxParentSet = len;
 				pPool = INTEGER(rparpool);
-				for(j = 0; j < len; j++) {
-					if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
-						for(k = 0; k < m_numNodes; k++)
-							if(pPool[j] == m_pRorder[k])
-								break;
-						if(k < m_numNodes)
-							fixedParentsPool[i][j] = k;
-						else
-							fixedParentsPool[i][j] = -1;
+				if (fixedParentsPool[i] && pPool) {
+					for(j = 0; j < len; j++) {
+						if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
+							for(k = 0; k < m_numNodes; k++)
+								if(pPool[j] == m_pRorder[k])
+									break;
+							if(k < m_numNodes)
+								fixedParentsPool[i][j] = k;
+							else
+								fixedParentsPool[i][j] = -1;
+						}
 					}
+					fixedParentsPool[i][len] = -1;
 				}
-				fixedParentsPool[i][len] = -1;
 				if(m_pSearchParams->m_maxParentsPool < len)
 					m_pSearchParams->m_maxParentsPool = len;
 			}
@@ -560,6 +574,9 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 				if(isVector(rnodecat) && len > 0) {
 					m_pSearchParams->m_pNodeNumCats[i] = len;
 					m_pSearchParams->m_pNodeCats[i] = (int*)CATNET_MALLOC(len*sizeof(int));
+					if (!m_pSearchParams->m_pNodeCats[i]) {
+						CATNET_MEM_ERR();
+					}
 					for(j = 0; j < len; j++)
 						m_pSearchParams->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
 				}
@@ -623,6 +640,9 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 	}
 	else /* !bIntSample */ {
 		pNodeOffsets = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
+		if (!pNodeOffsets) {
+			CATNET_MEM_ERR();
+		}
 		memset(pNodeOffsets, 0, m_numNodes*sizeof(int));
 
 		maxCategories = 0;
@@ -641,8 +661,10 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 			if(isVector(rnodecat) && len > 0) {
 				m_pSearchParams->m_pNodeNumCats[i] = len;
 				m_pSearchParams->m_pNodeCats[i] = (int*)CATNET_MALLOC(len*sizeof(int));
-				for(j = 0; j < len; j++)
-					m_pSearchParams->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+				if (m_pSearchParams->m_pNodeCats[i]) {
+					for(j = 0; j < len; j++)
+						m_pSearchParams->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+				}
 			}
 		}
 		for(i = m_numNodes - 1; i > 0; i--) 
@@ -654,17 +676,18 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 		pfSamples = (double*)m_pSearchParams->m_pSamples;
 		pfRsamples = REAL(rSamples);
 		int ii = 0;
-		for(i = 0; i < m_numNodes; i++) {
-//Rprintf("i = %d, ii = %d, %d, %d\n", i, ii, m_pRorder[i], pNodeOffsets[m_pRorder[i] - 1]);
-			for(j = 0; j < m_numSamples; j++) {
-				memcpy(pfSamples+j*sampleline + ii, 
-					pfRsamples+j*sampleline + pNodeOffsets[m_pRorder[i] - 1], 
-					m_pSearchParams->m_pNodeNumCats[i]*sizeof(double));
-				if(R_IsNA(pfSamples[j*sampleline + ii]) || pfSamples[j*sampleline + ii] < 0) {
-					pfSamples[j*sampleline + ii] = CATNET_NAN;
+		if (pfSamples && pfRsamples) {
+			for(i = 0; i < m_numNodes; i++) {
+				for(j = 0; j < m_numSamples; j++) {
+					memcpy(pfSamples+j*sampleline + ii, 
+						pfRsamples+j*sampleline + pNodeOffsets[m_pRorder[i] - 1], 
+						m_pSearchParams->m_pNodeNumCats[i]*sizeof(double));
+					if(R_IsNA(pfSamples[j*sampleline + ii]) || pfSamples[j*sampleline + ii] < 0) {
+						pfSamples[j*sampleline + ii] = CATNET_NAN;
+					}
 				}
+				ii += m_pSearchParams->m_pNodeNumCats[i];
 			}
-			ii += m_pSearchParams->m_pNodeNumCats[i];
 		}
 		UNPROTECT(1); // rSamples
 
@@ -724,8 +747,6 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 			}
 		} /* !bEqualCategories */
 	}
-
-//printf("RDagSearch: maxParentSet=%d, maxCategories=%d\n", maxParentSet, maxCategories);
 
 	if(!pDagList) 
 		CATNET_MEM_ERR();
@@ -845,8 +866,11 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 	PROTECT(pComplx = NEW_INTEGER(pDagList->m_numDags));
 	DAG_PARS<double> *pDags = pDagList->m_dagPars;
 	char *pParBuff = (char*)CATNET_MALLOC((m_numNodes+1)*sizeof(int));
-	int *pIntBuff = (int*)CATNET_MALLOC((m_numNodes+1)*sizeof(int));
+	int  *pIntBuff =  (int*)CATNET_MALLOC((m_numNodes+1)*sizeof(int));
 	int nParBuff;
+	if (!pParBuff || !pIntBuff) {
+		CATNET_MEM_ERR();
+	}
 	for(k = 0; k < pDagList->m_numDags && pDags; k++) {
 		NUMERIC_POINTER(pLoglik)[k] = pDags->loglik;
 		INTEGER_POINTER(pComplx)[k] = pDags->complx;
@@ -866,6 +890,7 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 		UNPROTECT(1);
 		pDags = pDags->next;
 	}
+
 	CATNET_FREE(pParBuff);
 	CATNET_FREE(pIntBuff);
 	SET_SLOT(daglist, install("numPars"), plist);
@@ -923,7 +948,7 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 
 	if(!isMatrix(rSamples))
 		error("Data is not a matrix");
-
+Rprintf("RCatnetSearchP\n");
 	PROTECT(rMaxParents = AS_INTEGER(rMaxParents));
 	maxParentSet = INTEGER_POINTER(rMaxParents)[0];
 	UNPROTECT(1);
@@ -968,6 +993,9 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 		!isNull(rParentsPool), !isNull(rFixedParentsPool), 
 		!isNull(rMatEdgeLiks), 0, 
 		NULL, this, sampleline, 0, hasClasses, klmode);
+	if (!m_pSearchParams) {
+		CATNET_MEM_ERR();
+	}
 
 	if(m_pRorder)
 		CATNET_FREE(m_pRorder);
@@ -975,6 +1003,9 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 	if(m_pRorderInverse)
 		CATNET_FREE(m_pRorderInverse);
 	m_pRorderInverse = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
+	if (!m_pRorder || !m_pRorderInverse) {
+		CATNET_MEM_ERR();
+	}
 
 	PROTECT(rOrder = AS_INTEGER(rOrder));
 	if(length(rOrder) < m_numNodes) {
@@ -995,6 +1026,9 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 	UNPROTECT(1);
 
 	pNodeOffsets = (int*)CATNET_MALLOC(m_numNodes*sizeof(int));
+	if (!pNodeOffsets) {
+		CATNET_MEM_ERR();
+	}
 	memset(pNodeOffsets, 0, m_numNodes*sizeof(int));
 
 	PROTECT(rNodeCats = AS_LIST(rNodeCats));
@@ -1007,8 +1041,10 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 		if(isVector(rnodecat) && len > 0) {
 			m_pSearchParams->m_pNodeNumCats[i] = len;
 			m_pSearchParams->m_pNodeCats[i] = (int*)CATNET_MALLOC(len*sizeof(int));
-			for(j = 0; j < len; j++)
-				m_pSearchParams->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+			if (m_pSearchParams->m_pNodeCats[i]) {
+				for(j = 0; j < len; j++)
+					m_pSearchParams->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+			}
 		}
 	}
 	for(i = m_numNodes - 1; i > 0; i--) 
@@ -1027,21 +1063,22 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 	}
 	
 	PROTECT(rSamples = AS_NUMERIC(rSamples));
-	pSamples = (double*)m_pSearchParams->m_pSamples;
+	pSamples  = (double*)m_pSearchParams->m_pSamples;
 	pRsamples = REAL(rSamples);
-	ii = 0;
-	for(i = 0; i < m_numNodes; i++) {
-		for(j = 0; j < m_numSamples; j++) {
-			memcpy(pSamples+j*sampleline + ii, 
-				pRsamples+j*sampleline + pNodeOffsets[m_pRorder[i] - 1], 
-				m_pSearchParams->m_pNodeNumCats[i]*sizeof(double));
-			if(R_IsNA(pSamples[j*sampleline + ii]) || pSamples[j*sampleline + ii] < 0) {
-				pSamples[j*sampleline + ii] = CATNET_NAN;
+	if (pSamples && pRsamples) {
+		ii = 0;
+		for(i = 0; i < m_numNodes; i++) {
+			for(j = 0; j < m_numSamples; j++) {
+				memcpy(pSamples+j*sampleline + ii, 
+					pRsamples+j*sampleline + pNodeOffsets[m_pRorder[i] - 1], 
+					m_pSearchParams->m_pNodeNumCats[i]*sizeof(double));
+				if(R_IsNA(pSamples[j*sampleline + ii]) || pSamples[j*sampleline + ii] < 0) {
+					pSamples[j*sampleline + ii] = CATNET_NAN;
+				}
 			}
+			ii += m_pSearchParams->m_pNodeNumCats[i];
 		}
-		ii += m_pSearchParams->m_pNodeNumCats[i];
 	}
-
 	UNPROTECT(1); // rSamples
 
 	CATNET_FREE(pNodeOffsets);
@@ -1064,7 +1101,8 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 		PROTECT(rClasses = AS_INTEGER(rClasses));
 		pClasses = (int*)m_pSearchParams->m_pClasses;
 		pRclasses = INTEGER(rClasses);
-		memcpy(pClasses, pRclasses, m_numSamples*sizeof(int));
+		if (pClasses && pRclasses)
+			memcpy(pClasses, pRclasses, m_numSamples*sizeof(int));
 		UNPROTECT(1); // rClasses
 	}
 
@@ -1078,18 +1116,20 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 			if(isVector(rparpool) && len > 0 && len <= m_numNodes) {
 				parentsPool[i] = (int*)CATNET_MALLOC((len+1)*sizeof(int));
 				pPool = INTEGER(rparpool);
-				for(j = 0; j < len; j++) {
-					if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
-						for(k = 0; k < m_numNodes; k++)
-							if(pPool[j] == m_pRorder[k])
-								break;
-						if(k < m_numNodes)
-							parentsPool[i][j] = k;
-						else
-							parentsPool[i][j] = -1;
+				if (parentsPool[i] && pPool) {
+					for(j = 0; j < len; j++) {
+						if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
+							for(k = 0; k < m_numNodes; k++)
+								if(pPool[j] == m_pRorder[k])
+									break;
+							if(k < m_numNodes)
+								parentsPool[i][j] = k;
+							else
+								parentsPool[i][j] = -1;
+						}
 					}
+					parentsPool[i][len] = -1;
 				}
-				parentsPool[i][len] = -1;
 				if(m_pSearchParams->m_maxParentsPool < len)
 					m_pSearchParams->m_maxParentsPool = len;
 			}
@@ -1109,15 +1149,17 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 			 	if(maxParentSet < len)
 			    		maxParentSet = len;
 				pPool = INTEGER(rparpool);
-				for(j = 0; j < len; j++) {
-					if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
-						for(k = 0; k < m_numNodes; k++)
-							if(pPool[j] == m_pRorder[k])
-								break;
-						if(k < m_numNodes)
-							fixedParentsPool[i][j] = k;
-						else
-							fixedParentsPool[i][j] = -1;
+				if (fixedParentsPool[i] && pPool) {
+					for(j = 0; j < len; j++) {
+						if(pPool[j] > 0 && pPool[j] <= m_numNodes) {
+							for(k = 0; k < m_numNodes; k++)
+								if(pPool[j] == m_pRorder[k])
+									break;
+							if(k < m_numNodes)
+								fixedParentsPool[i][j] = k;
+							else
+								fixedParentsPool[i][j] = -1;
+						}
 					}
 				}
 				fixedParentsPool[i][len] = -1;
@@ -1187,7 +1229,7 @@ SEXP RCatnetSearchP::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 	if(m_pRorderInverse)
 		CATNET_FREE(m_pRorderInverse);
 	m_pRorderInverse = 0;
-
+Rprintf("estimate exit");
 	return cnetlist;
 }
 

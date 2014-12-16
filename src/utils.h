@@ -137,8 +137,10 @@ t_elem _gen_std_normal_var() {
 	/* ISO C pseudo random generator */
 	/* include stdlib.h and math.h */
 	t_elem u, v;
-	u = (t_elem)rand() / (t_elem)RAND_MAX;
-	v = (t_elem)rand() / (t_elem)RAND_MAX;
+	GetRNGstate();
+	u = (t_elem)unif_rand();
+	v = (t_elem)unif_rand();
+	PutRNGstate();
 	return(sqrt(-2*log(u)) * cos(CATNET_PI2*v));
 }
 
@@ -150,10 +152,12 @@ int _gen_permutation(t_elem *psample, int nsample) {
 		return -1;
 	int *paux = (int*)malloc(nsample*sizeof(int));
 	cc = 0;
+	
+	GetRNGstate();
 	while(++cc < 1e5) {
 		brep = 0;
 		for(i = 0; i < nsample; i++)
-			paux[i] = (int)rand();
+			paux[i] = (int)(nsample*nsample*unif_rand());
 		for(j = 0; j < nsample; j++) {
 			psample[j] = 0;
 			for(i = 0; i < nsample; i++) {
@@ -170,15 +174,12 @@ int _gen_permutation(t_elem *psample, int nsample) {
 		if(!brep)
 			break;
 	}
+	PutRNGstate();
 	if(cc >= 1e5-1) {
 		for(j = 0; j < nsample; j++)
 			psample[j] = j+1;
 	}
 	free(paux);
-//printf("permutation ");
-//for(i=0;i<nsample;i++)
-//printf("%d ", psample[i]);
-//printf("\n");
 	return 0;
 }
 
@@ -188,10 +189,12 @@ int _gen_binomial(int size, t_elem prob) {
 	if(size < 1 || prob <= 0)
 		return 0;
 	r = 0;
+	GetRNGstate();
 	for(i = 0; i < size; i++) {
-		if((t_elem)rand() / (t_elem)RAND_MAX <= prob)
+		if((t_elem)unif_rand() <= prob)
 			r++;
 	}
+	PutRNGstate();
 	return r;
 }
 

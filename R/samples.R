@@ -437,11 +437,9 @@ setMethod("cnSetProb", "catNetwork",
                       setDefaultProb(parid, object@pars[[parid]], object@cats,
                                     seq(1, length(object@pars[[parid]])))
                   })
-
 		newobject <- .Call("ccnSetProb", 
                       	object, data, pert, 
                       	PACKAGE="sdnet")
-
                 ## awkward but necessary
 		newobject@nodes <- object@nodes
 	    }

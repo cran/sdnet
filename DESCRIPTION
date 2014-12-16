@@ -1,6 +1,6 @@
 Package: sdnet
 Title: Soft Discretization-based Bayesian Network Inference
-Version: 2.01.3
+Version: 2.03.3
 Author: Nikolay Balov
 Description: Fitting discrete Bayesian networks using marginal mixture distributions
 Maintainer: Nikolay Balov <nhbalov@gmail.com>
@@ -14,7 +14,7 @@ Collate: class.R def.R graph2catnet.R dags.R probs.R joint.prob.R
         cluster.R bif.R xdsl.R quant.R expres.r zzz.R
 LazyLoad: yes
 Repository: CRAN
-Date/Publication: 2014-02-27 20:34:58
+Date/Publication: 2014-12-16 19:19:01
 URL:
-Packaged: 2014-02-27 17:50:40 UTC; nhb
+Packaged: 2014-12-16 16:28:06 UTC; nhb
 NeedsCompilation: yes

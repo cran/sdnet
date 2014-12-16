@@ -146,7 +146,8 @@ SEXP catnetJointProb(SEXP cnet, SEXP rnode)
 
 	PROTECT(rvec = NEW_NUMERIC(jointprobsize));
 	pvec = NUMERIC_POINTER(rvec);
-	memcpy(pvec, pjoint, jointprobsize*sizeof(double));
+	if (pvec && pjoint)
+		memcpy(pvec, pjoint, jointprobsize*sizeof(double));
 	UNPROTECT(1);
 
 	CATNET_FREE(pjoint);
@@ -511,11 +512,12 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 		PROTECT(cnet);
 		RCatnet *rnet = new RCatnet(cnet);
 		UNPROTECT(1);
+
 		numnodes = rnet->numNodes();
 
 		PROTECT(rSamples = AS_INTEGER(rSamples));
-		int *pSamples = INTEGER(rSamples);
-		int *psubSamples;
+		int *pSamples    = INTEGER(rSamples);
+		int *pSubSamples;
 
 		dim = GET_DIM(rSamples);
 		numnodes = INTEGER(dim)[0];
@@ -532,21 +534,22 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 				pSamples[j]--;
 		}
 
-		psubSamples = 0;
+		pSubSamples = 0;
 		if(!isNull(rPerturbations))
-			psubSamples = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
+			pSubSamples = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
 
 		for(nnode = 0; nnode < numnodes; nnode++) {
-			if(pPerturbations) {
+			if(pPerturbations && pSubSamples) {
 				numsubsamples = 0;
 				for(j = 0; j < numsamples; j++) {		
 					if(!pPerturbations[j * numnodes + nnode]) {
-						memcpy(psubSamples + numsubsamples*numnodes, 
+						memcpy(pSubSamples + numsubsamples*numnodes, 
 							pSamples + j*numnodes, numnodes*sizeof(int));
 						numsubsamples++;
 					}
 				}
-				rnet->CATNETD<double>::setNodeSampleProb(nnode, psubSamples, numsubsamples, 1);
+				rnet->CATNETD<double>::setNodeSampleProb(nnode, pSubSamples, 
+									numsubsamples, 1);
 			}
 			else {
 				rnet->CATNETD<double>::setNodeSampleProb(nnode, pSamples, numsamples, 1);
@@ -554,8 +557,8 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 		}
 
 		UNPROTECT(1); /* pSamples */
-		if(psubSamples)
-			CATNET_FREE(psubSamples);
+		if(pSubSamples)
+			CATNET_FREE(pSubSamples);
 
 		pcnet = rnet->genRcatnet((const char*)"catNetwork");
 
@@ -565,11 +568,13 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 		PROTECT(cnet);
 		RCatnetP *rnet = new RCatnetP(cnet);
 		UNPROTECT(1);
+
 		numnodes = rnet->numNodes();
 
-		PROTECT(rSamples = AS_NUMERIC(rSamples));
+		PROTECT(rSamples  = AS_NUMERIC(rSamples));
 		double * pSamples = REAL(rSamples);
-		double * psubSamples;
+		double * pSubSamples;
+
 		dim = GET_DIM(rSamples);
 		numsamples = INTEGER(dim)[1];
 		nlines = INTEGER(dim)[0];
@@ -582,28 +587,31 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 			error("wrong data");
 		}
 
-		psubSamples = 0;
+		pSubSamples = 0;
 		if(!isNull(rPerturbations))
-			psubSamples = (double*)CATNET_MALLOC(nlines*numsamples*sizeof(double));
+			pSubSamples = (double*)CATNET_MALLOC(nlines*numsamples*sizeof(double));
 
 		for(nnode = 0; nnode < numnodes; nnode++) {
-			if(pPerturbations) {
+			if(pPerturbations && pSubSamples) {
 				numsubsamples = 0;
 				for(j = 0; j < numsamples; j++) {
 					if(!pPerturbations[j * numnodes + nnode]) {
-						memcpy(psubSamples + numsubsamples*nlines, pSamples + j*nlines, nlines*sizeof(double));
+						memcpy(pSubSamples + numsubsamples*nlines, 
+							pSamples + j*nlines, nlines*sizeof(double));
 						numsubsamples++;
 					}
 				}
-				rnet->CATNETP<double>::setNodeSampleProb(nnode, psubSamples, numsubsamples, 1);
+				rnet->CATNETP<double>::setNodeSampleProb(nnode, 
+									pSubSamples, numsubsamples, 1);
 			}
-			else
+			else {
 				rnet->CATNETP<double>::setNodeSampleProb(nnode, pSamples, numsamples, 1);
+			}
 		}
 
-		UNPROTECT(1); /* pSamples */
-		if(psubSamples)
-			CATNET_FREE(psubSamples);
+		UNPROTECT(1); /* rSamples */
+		if(pSubSamples)
+			CATNET_FREE(pSubSamples);
 
 		pcnet = rnet->genRcatnet((const char*)"catNetwork");
 		delete rnet;
@@ -765,8 +773,11 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 	if(nnodes < 1)
 		return rvec;
 	pnodes = (int*)CATNET_MALLOC(nnodes*sizeof(int));
+	if (!pnodes)
+		return rvec;
 	PROTECT(rNode = AS_INTEGER(rNode));
-	memcpy(pnodes, INTEGER_POINTER(rNode), nnodes*sizeof(int));
+	if (INTEGER_POINTER(rNode) && nnodes > 0)
+		memcpy(pnodes, INTEGER_POINTER(rNode), nnodes*sizeof(int));
 	UNPROTECT(1);
 
 	PROTECT(rvec = NEW_NUMERIC(nnodes));
@@ -780,7 +791,7 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 
 		PROTECT(rSamples = AS_INTEGER(rSamples));
 		int *pSamples = INTEGER(rSamples);
-		int * psubSamples;
+		int * pSubSamples;
 
 		dim = GET_DIM(rSamples);
 		if(numnodes != INTEGER(dim)[0])
@@ -799,22 +810,24 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 			nnode = pnodes[i] - 1;
 			if(nnode < 0 || nnode >= numnodes)
 				CATNET_PARAM_ERR();
-			psubSamples = 0;
+			pSubSamples = 0;
 			pPerturbations = 0;
 			if(!isNull(rPerturbations)) {
 				PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 				pPerturbations = INTEGER(rPerturbations);
-				psubSamples = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
-				numsubsamples = 0;
-				for(j = 0; j < numsamples; j++) {
-					if(!pPerturbations[j * numnodes + nnode]) {
-						memcpy(psubSamples + numsubsamples*numnodes, pSamples + j*numnodes, numnodes*sizeof(int));
-						numsubsamples++;
+				pSubSamples = (int*)CATNET_MALLOC(numnodes*numsamples*sizeof(int));
+				if (pSubSamples) {
+					numsubsamples = 0;
+					for(j = 0; j < numsamples; j++) {
+						if(!pPerturbations[j * numnodes + nnode]) {
+							memcpy(pSubSamples + numsubsamples*numnodes, pSamples + j*numnodes, numnodes*sizeof(int));
+							numsubsamples++;
+						}
 					}
+					floglik = rnet->CATNETD<double>::sampleNodeLoglik(nnode, pSubSamples, numsubsamples, klmode);
+					CATNET_FREE(pSubSamples);
 				}
-				floglik = rnet->CATNETD<double>::sampleNodeLoglik(nnode, psubSamples, numsubsamples, klmode);
 				UNPROTECT(1);
-				CATNET_FREE(psubSamples);
 			}
 			else {
 				floglik = rnet->CATNETD<double>::sampleNodeLoglik(nnode, pSamples, numsamples, klmode);
@@ -835,7 +848,7 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 
 		PROTECT(rSamples = AS_NUMERIC(rSamples));
 		double * pSamples = REAL(rSamples);
-		double * psubSamples;
+		double * pSubSamples;
 		dim = GET_DIM(rSamples);
 		numsamples = INTEGER(dim)[1];
 		nlines = INTEGER(dim)[0];
@@ -850,22 +863,24 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 
 		for(i = 0; i < nnodes; i++) { 
 			nnode = pnodes[i] - 1;
-			psubSamples = 0;
+			pSubSamples = 0;
 			pPerturbations = 0;
 			if(!isNull(rPerturbations)) {
 				PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 				pPerturbations = INTEGER(rPerturbations);
-				psubSamples = (double*)CATNET_MALLOC(nlines*numsamples*sizeof(int));
-				numsubsamples = 0;
-				for(j = 0; j < numsamples; j++) {
-					if(!pPerturbations[j * numnodes + nnode]) {
-						memcpy(psubSamples + numsubsamples*nlines, pSamples + j*nlines, nlines*sizeof(double));
-						numsubsamples++;
+				pSubSamples = (double*)CATNET_MALLOC(nlines*numsamples*sizeof(int));
+				if (pSubSamples) {
+					numsubsamples = 0;
+					for(j = 0; j < numsamples; j++) {
+						if(!pPerturbations[j * numnodes + nnode]) {
+							memcpy(pSubSamples + numsubsamples*nlines, pSamples + j*nlines, nlines*sizeof(double));
+							numsubsamples++;
+						}
 					}
+					floglik = rnet->CATNETP<double>::sampleNodeLoglik(nnode, pSubSamples, numsubsamples, klmode);
+					CATNET_FREE(pSubSamples);
 				}
-				floglik = rnet->CATNETP<double>::sampleNodeLoglik(nnode, psubSamples, numsubsamples, klmode);
 				UNPROTECT(1);
-				CATNET_FREE(psubSamples);
 			}
 			else
 				floglik = rnet->CATNETP<double>::sampleNodeLoglik(nnode, pSamples, numsamples, klmode);
@@ -925,7 +940,6 @@ SEXP catnetSetSeed(SEXP rSeed)
 	UNPROTECT(1);
 
 	g_setseed = nSeed;
-	srand(g_setseed);
 
 	return(R_NilValue);
 }

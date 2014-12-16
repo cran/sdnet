@@ -33,8 +33,8 @@ cnSearchHist(data, pert=NULL,
 \details{The function performs \code{niter} calls of \code{cnSearchOrder} for randomly generated node orders (uniformly over the space of all possible node orders), selects networks according to \code{score} and sum their parent matrices weighted by \code{weight}. Three scoring criteria are currently supported: "BIC", "AIC" and maximum complexity for any other value of \code{score}. The \code{weight} can be 
 1) "likelihhod", then the parent matrices are multiplied by the network likelihood, 
 1) "score", then the parent matrices are multiplied by the exponential of the network score, 
-3) any other value of \code{weihgt} uses multiplier 1. In this case 
-the entries in the output \code{matrix} show how many times the corresponding parent-child pairs were found. 
+3) any other value of \code{weight} uses multiplier 1. In this case 
+the entries in the output \code{matrix} count the presence of the corresponding parent-child pairs. 
 
 
 The function can runs \code{numThreads} number of parallel threads each processing different order. 
@@ -45,10 +45,11 @@ The function can runs \code{numThreads} number of parallel threads each processi
 \author{N. Balov}
 
 \examples{
+  library(sdnet)
   cnet <- cnRandomCatnet(numnodes=8, maxpars=3, numcats=2)
   psamples  <- cnSamples(object=cnet, numsamples=100)
   mhisto <- cnSearchHist(data=psamples, pert=NULL, 
-		maxParentSet=2, maxComplexity=20)
+		maxParentSet=2, maxComplexity=100)
   mhisto
 }
 

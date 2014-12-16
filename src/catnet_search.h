@@ -52,11 +52,11 @@ protected:
 	int m_numNodes, *m_pNodeNumCats, **m_pNodeCats, m_numSamples;
 public:
 	CATNETD_SEARCH() {
-		m_nCatnets = 0;
-		m_pCatnets = 0;
-		m_numNodes = 0;
+		m_nCatnets     = 0;
+		m_pCatnets     = 0;
+		m_numNodes     = 0;
 		m_pNodeNumCats = 0;
-		m_pNodeCats = 0;
+		m_pNodeCats    = 0;
 	}
 
 	~CATNETD_SEARCH() {
@@ -77,11 +77,11 @@ protected:
 	int m_numNodes, *m_pNodeNumCats, **m_pNodeCats, m_numSamples;
 public:
 	CATNETP_SEARCH() {
-		m_nCatnets = 0;
-		m_pCatnets = 0;
-		m_numNodes = 0;
+		m_nCatnets     = 0;
+		m_pCatnets     = 0;
+		m_numNodes     = 0;
 		m_pNodeNumCats = 0;
-		m_pNodeCats = 0;
+		m_pNodeCats    = 0;
 	}
 
 	~CATNETP_SEARCH() {
@@ -168,21 +168,30 @@ public:
 		if(maxComplexity < numNodes)
 			maxComplexity = numNodes;
 		
-		m_numNodes = numNodes;
-		m_numSamples = numSamples;
-
+		m_numNodes    = numNodes;
+		m_numSamples  = numSamples;
 		maxCategories = 0;
 
 		m_pNodeNumCats = (int*)CATNET_MALLOC(numNodes*sizeof(int));
-		m_pNodeCats = (int**)CATNET_MALLOC(numNodes*sizeof(int*));
-		memset(m_pNodeCats, 0, numNodes*sizeof(int*));
+		if (!m_pNodeNumCats) 
+			return CATNET_ERR_MEM;
+		m_pNodeCats    = (int**)CATNET_MALLOC(numNodes*sizeof(int*));
+		if (!m_pNodeCats) { 
+			CATNET_FREE(m_pNodeNumCats);
+			return CATNET_ERR_MEM;
+		}
+
+		memset(m_pNodeCats,    0, numNodes*sizeof(int*));
 		memset(m_pNodeNumCats, 0, numNodes*sizeof(int));
 
 		if(pestim->m_pNodeNumCats && pestim->m_pNodeCats) {
 			memcpy(m_pNodeNumCats, pestim->m_pNodeNumCats, numNodes*sizeof(int));
 			for(i = 0; i < numNodes; i++) {
 				m_pNodeCats[i] = (int*)CATNET_MALLOC(m_pNodeNumCats[i]*sizeof(int));
-				memcpy(m_pNodeCats[i], pestim->m_pNodeCats[i], m_pNodeNumCats[i]*sizeof(int));
+				if (!m_pNodeCats[i])
+					return CATNET_ERR_MEM;
+				if (pestim->m_pNodeCats && pestim->m_pNodeCats[i])
+					memcpy(m_pNodeCats[i], pestim->m_pNodeCats[i], m_pNodeNumCats[i]*sizeof(int));
 			}
 		}
 
@@ -201,6 +210,9 @@ public:
 				}
 				m_pNodeNumCats[i] = maxcat - mincat + 1;
 				m_pNodeCats[i] = (int*)CATNET_MALLOC(m_pNodeNumCats[i]*sizeof(int));
+				if (!m_pNodeCats[i]) {
+					return CATNET_ERR_MEM;
+				}
 				for(j = 0; j < m_pNodeNumCats[i]; j++)
 					m_pNodeCats[i][j] = mincat + j;
 				/* order m_pNodeNumCats[i] */
@@ -254,9 +266,12 @@ public:
 				bEqualCategories = 0;
 		}
 
-		parset = (int*)CATNET_MALLOC(numNodes*sizeof(int));
-		idparset = (int*)CATNET_MALLOC(numNodes*sizeof(int));
+		parset    = (int*)CATNET_MALLOC(numNodes*sizeof(int));
+		idparset  = (int*)CATNET_MALLOC(numNodes*sizeof(int));
 		fixparset = (int*)CATNET_MALLOC(numNodes*sizeof(int));
+		if (!parset || !idparset || !fixparset) {
+			return CATNET_ERR_MEM;
+		}
 		bernoulibuff = 0;
 		if(matEdgeLiks)
 			bernoulibuff = (int*)CATNET_MALLOC(numNodes*sizeof(int));
@@ -279,9 +294,10 @@ public:
 				}
 				k = 0;
 				ncomb = 0;
+				GetRNGstate();
 				while(k < pestim->m_maxParentsPool && ncomb < numNodes*numNodes) {
 					ncomb++;
-					ff = fsum * (double)rand() / (double)RAND_MAX;
+					ff = fsum * (double)unif_rand();
 					fs = 0;
 					j = 0;
 					while(fs <= ff && j < i) {
@@ -298,17 +314,21 @@ public:
 					parentsPool[i][k] = j;
 					k++;
 				}
+				PutRNGstate();
 			}
 		}
 
 #ifdef DISCRETE_SAMPLE
 		m_nCatnets = maxComplexity + 1;
 		m_pCatnets = (CATNETD<t_prob>**)CATNET_MALLOC(m_nCatnets*sizeof(CATNETD<t_prob>));
+		if (!m_pCatnets) {
+			return CATNET_ERR_MEM;
+		}
 		memset(m_pCatnets, 0, m_nCatnets*sizeof(CATNETD<t_prob>*));
 
 		pCurCatnetList = (CATNETD<t_prob>**)CATNET_MALLOC(m_nCatnets*sizeof(CATNETD<t_prob>*));
-
-		pSubSamples = 0;
+		
+pSubSamples = 0;
 		if(perturbations)
 			pSubSamples = (int*)CATNET_MALLOC(numNodes*numSamples*sizeof(int));
 
@@ -317,6 +337,9 @@ public:
 #else
 		m_nCatnets = maxComplexity + 1;
 		m_pCatnets = (CATNETP<t_prob>**)CATNET_MALLOC(m_nCatnets*sizeof(CATNETP<t_prob>));
+		if (!m_pCatnets) {
+			return CATNET_ERR_MEM;
+		}
 		memset(m_pCatnets, 0, m_nCatnets*sizeof(CATNETP<t_prob>*));
 
 		pCurCatnetList = (CATNETP<t_prob>**)CATNET_MALLOC(m_nCatnets*sizeof(CATNETP<t_prob>*));
@@ -327,6 +350,19 @@ public:
 		/* create a network without edges*/
 		pNewNet = new CATNETP<t_prob>(numNodes, 0/*maxParentSet*/, maxCategories, 0, 0, 0, m_pNodeNumCats);
 #endif
+
+		if (!pCurCatnetList || !pNewNet) {
+			if (m_pCatnets)
+				CATNET_FREE(m_pCatnets);
+			if (pCurCatnetList)
+				CATNET_FREE(pCurCatnetList);
+			if (pNewNet)
+				delete pNewNet;
+			CATNET_FREE(parset);
+			CATNET_FREE(fixparset);
+			CATNET_FREE(idparset);
+			return CATNET_ERR_MEM;
+		}
 
 		pSubClasses = 0;
 		if(pClasses)
@@ -372,7 +408,7 @@ public:
 			// at this point m_pProbLists are not initialized
 			// set sample probabilities and calculate log-likelihood
 			numSubSamples = numSamples;
-			if(perturbations) {
+			if(perturbations && pSubSamples) {
 				numSubSamples = 0;
 				for(j = 0; j < numSamples; j++) {
 					if(!perturbations[j * numNodes + nnode]) {
@@ -383,7 +419,8 @@ public:
 						memcpy(pSubSamples + numSubSamples*nline, 
 							pSamples + j*nline, nline*sizeof(t_prob));
 #endif
-						if(pClasses) pSubClasses[numSubSamples] = pClasses[j];
+						if(pClasses && pSubClasses) 
+							pSubClasses[numSubSamples] = pClasses[j];
 						numSubSamples++;
 					}
 				}
@@ -400,7 +437,7 @@ public:
 			}
 
 			priorLogLik = 0;
-			if(matEdgeLiks) {
+			if(matEdgeLiks && bernoulibuff) {
 				tempLogLik = 1;
 				memset(bernoulibuff, 0, numNodes*sizeof(int));
 				for(i = 0; i < fixparsetsize; i++) {
@@ -529,11 +566,15 @@ public:
 				        if(fixparsetsize > 0) {
 				        	if(!pcomblist || ncomblist < 1) {
 				        	    	pcomblist = (int**)CATNET_MALLOC(1*sizeof(int*));
+							if (!pcomblist)
+								return CATNET_ERR_MEM;
 				            		pcomblist[0] = 0;	
-				            		ncomblist = 1;
+				            		ncomblist    = 1;
 				          	}
 				        	for(k = 0; k < ncomblist; k++) {
 				            		paux = (int*)CATNET_MALLOC(d*sizeof(int));
+							if (!paux)
+								return CATNET_ERR_MEM;
 							for(j = 0; j < fixparsetsize; j++)
 				            			paux[j] = fixparset[j];
 					        	if(pcomblist[k] && d > fixparsetsize) {
@@ -558,7 +599,7 @@ public:
 			     
 						// add perturbation
 						numSubSamples = numSamples;
-						if(perturbations) {
+						if(perturbations && pSubSamples) {
 							numSubSamples = 0;
 							for(j = 0; j < numSamples; j++) {
 								if(!perturbations[j * numNodes + nnode]) {
@@ -587,7 +628,7 @@ public:
 
 						/*prior*/
 						priorLogLik = 0;
-						if(matEdgeLiks) {
+						if(matEdgeLiks && bernoulibuff) {
 							tempLogLik = 1;
 							memset(bernoulibuff, 0, numNodes*sizeof(int));
 							for(i = 0; i < d; i++) {
@@ -681,7 +722,6 @@ public:
 							*pCurCatnetList[complx] = *m_pCatnets[k];
 							pCurCatnetList[complx]->setParents(nnode, idparset, d);
 							pCurCatnetList[complx]->setNodeProb(nnode, &probMaxNode);
-//printf("[%d][%f] pars: ", nnode, fMaxLogLik);for(i = 0; i < d; i++) printf("%d ", idparset[i]);printf("\n");
 						}
 					}
 				} /* for k */
@@ -702,11 +742,15 @@ public:
 				if(fixparsetsize > 0) {
 					if(!pcomblist || ncomblist < 1) {
 					    	pcomblist = (int**)CATNET_MALLOC(1*sizeof(int*));
+						if (!pcomblist)
+							return CATNET_ERR_MEM;
 			         		pcomblist[0] = 0;	
 						ncomblist = 1;
 					}
 					for(k = 0; k < ncomblist; k++) {
 				        	paux = (int*)CATNET_MALLOC(d*sizeof(int));
+						if (!paux)
+							return CATNET_ERR_MEM;
 						for(j = 0; j < fixparsetsize; j++)
 				            		paux[j] = fixparset[j];
 					        if(pcomblist[k] && d > fixparsetsize) {
@@ -743,7 +787,7 @@ public:
 			     
 						// add perturbation
 						numSubSamples = numSamples;
-						if(perturbations) {
+						if(perturbations && pSubSamples) {
 							numSubSamples = 0;
 							for(j = 0; j < numSamples; j++) {
 								if(!perturbations[j * numNodes + nnode]) {
@@ -772,7 +816,7 @@ public:
 
 						/*prior*/
 						priorLogLik = 0;
-						if(matEdgeLiks) {
+						if(matEdgeLiks && bernoulibuff) {
 							tempLogLik = 1;
 							memset(bernoulibuff, 0, numNodes*sizeof(int));
 							for(i = 0; i < d; i++) {

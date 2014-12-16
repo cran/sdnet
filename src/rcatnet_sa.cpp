@@ -42,15 +42,15 @@ THREAD_PROC_DEFINE(CatnetSearchSaThreadProc, pParam) {
 double *catnetPairwiseCondLikelihood(SEXP rSamples, SEXP rPerturbations);
 
 RCatnetSearchSA::RCatnetSearchSA() {
-	m_nDrives = 0;
-	m_pDrives = NULL;
-	m_pTestOrder = NULL;
+	m_nDrives           = 0;
+	m_pDrives           = NULL;
+	m_pTestOrder        = NULL;
 	m_pTestOrderInverse = NULL;
-	m_bUseCache = 1;
-	m_pSearchParams = NULL;
-	m_pOptOrder = NULL;
-	m_nOptNets = 0;
-	m_pOptNets = NULL;
+	m_bUseCache         = 1;
+	m_pSearchParams     = NULL;
+	m_pOptOrder         = NULL;
+	m_nOptNets          = 0;
+	m_pOptNets          = NULL;
 }
 
 RCatnetSearchSA::~RCatnetSearchSA() {
@@ -120,6 +120,8 @@ int *RCatnetSearchSA::_genOrder(const int *porder, int norder, int shuffles, int
 	if (norder < 1)
 		return 0;
 	neworder = (int*) CATNET_MALLOC(norder * sizeof(int));
+	if (!neworder)
+		return 0;
 	if (shuffles <= 0) {
 		_gen_permutation<int> (neworder, norder);
 		return neworder;
@@ -127,15 +129,20 @@ int *RCatnetSearchSA::_genOrder(const int *porder, int norder, int shuffles, int
 	if (!porder || shuffles < 0)
 		return 0;
 	int *torder = (int*) CATNET_MALLOC(norder * sizeof(int));
+	if (!torder)
+		return 0;
+
 	memcpy(neworder, porder, norder * sizeof(int));
+
+	GetRNGstate();
 	for (sh = 0; sh < shuffles; sh++) {
 		memcpy(torder, neworder, norder * sizeof(int));
-		u = (double) rand() / (double) RAND_MAX;
+		u = (double)unif_rand();
 		n1 = (int) (u * norder);
 		if (bjump) {
 			n2 = n1;
 			while (n2 == n1) {
-				u = (double) rand() / (double) RAND_MAX;
+				u = (double)unif_rand();
 				n2 = (int) (u * norder);
 			}
 		} else {
@@ -165,6 +172,8 @@ int *RCatnetSearchSA::_genOrder(const int *porder, int norder, int shuffles, int
 					neworder[i] = torder[i];
 		}
 	}
+	PutRNGstate();
+
 	CATNET_FREE(torder);
 	return neworder;
 }
@@ -174,13 +183,18 @@ int *RCatnetSearchSA::_genOrderFormDirProbs(const int *porder, int numnodes, dou
 	double *probs, faux, fsum;
 	if (numnodes < 1 || !matEdgeLiks || !pOrderProb)
 		return 0;
-	neworder = (int*) CATNET_MALLOC(numnodes*sizeof(int));
+
+	neworder =    (int*) CATNET_MALLOC(numnodes*sizeof(int));
+	flags    =    (int*) CATNET_MALLOC(numnodes*sizeof(int));
+	probs    = (double*) CATNET_MALLOC(numnodes*sizeof(double));
+	if (!neworder || !flags || !probs)
+		return 0;
+
 	memset(neworder, 0, numnodes*sizeof(int));
-	flags = (int*) CATNET_MALLOC(numnodes*sizeof(int));
-	probs = (double*) CATNET_MALLOC(numnodes*sizeof(double));
 
 	*pOrderProb = 1;
 	neworder[0] = 0;
+	GetRNGstate();
 	for(k = 1; k < numnodes; k++) {
 		fsum = 0;
 		for(i = 0; i <= k; i++) {
@@ -196,7 +210,7 @@ int *RCatnetSearchSA::_genOrderFormDirProbs(const int *porder, int numnodes, dou
 			probs[i] = faux;
 			fsum += faux;
 		}
-		faux = (double)fsum * ((double) rand() / (double) RAND_MAX);
+		faux = (double)fsum * (double)unif_rand();
 		fsum = 0;
 		for(i = 0; i < k; i++) {
 			fsum += probs[i];
@@ -211,6 +225,8 @@ int *RCatnetSearchSA::_genOrderFormDirProbs(const int *porder, int numnodes, dou
 			memcpy(flags + i + 1, neworder + i, (k-i)*sizeof(int));
 		memcpy(neworder, flags, (k+1)*sizeof(int));
 	}
+	PutRNGstate();
+
 	// order should be with indices in [1, numnodes]
 	for(i = 0; i < numnodes; i++)
 		neworder[i]++;
@@ -225,8 +241,8 @@ int *RCatnetSearchSA::_genOrderFormDirProbs(const int *porder, int numnodes, dou
 
 SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 		SEXP rPerturbations, SEXP rMaxParents, SEXP rParentSizes,
-		SEXP rMaxComplexity, SEXP rNodeCats, SEXP rParentsPool, SEXP rFixedParentsPool, SEXP rMaxParentsPool, 
-		SEXP rMatEdgeLiks, SEXP rDirProbs, 
+		SEXP rMaxComplexity, SEXP rNodeCats, SEXP rParentsPool, SEXP rFixedParentsPool, 
+		SEXP rMaxParentsPool, SEXP rMatEdgeLiks, SEXP rDirProbs, 
 		SEXP rModel, SEXP rStartOrder, SEXP rTempStart, SEXP rTempCoolFact,
 		SEXP rTempCheckOrders, SEXP rMaxIter, SEXP rOrderShuffles,
 		SEXP rStopDiff, SEXP rThreads, SEXP rUseCache, SEXP rEcho) {
@@ -248,7 +264,8 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 	const char *pstr;
 	char **pNodeNames;
 
-	double *matEdgeLiks, *pMatEdgeLiks, ordProb, *newOrdProb, *pDirProbs, *matNodeCondLiks, *pNodeCondLiks;
+	double *matEdgeLiks, *pMatEdgeLiks, ordProb, *newOrdProb, *pDirProbs, 
+	       *matNodeCondLiks, *pNodeCondLiks;
 	
 	RCatnet rcatnet;
 	SEXP dim, rnodecat, rparpool, cnetlist, cnetnode;
@@ -272,16 +289,17 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 	PROTECT(rModel = AS_CHARACTER(rModel));
 	PROTECT(rEcho = AS_LOGICAL(rEcho));
 
-	m_maxParentSet = INTEGER_POINTER(rMaxParents)[0];
-	maxComplexity = INTEGER_POINTER(rMaxComplexity)[0];
-	maxParentsPool = INTEGER_POINTER(rMaxParentsPool)[0];
-	tempStart = NUMERIC_POINTER(rTempStart)[0];
-	tempCoolFact = NUMERIC_POINTER(rTempCoolFact)[0];
+	m_maxParentSet  = INTEGER_POINTER(rMaxParents)[0];
+	maxComplexity   = INTEGER_POINTER(rMaxComplexity)[0];
+	maxParentsPool  = INTEGER_POINTER(rMaxParentsPool)[0];
+	tempStart       = NUMERIC_POINTER(rTempStart)[0];
+	tempCoolFact    = NUMERIC_POINTER(rTempCoolFact)[0];
 	tempCheckOrders = INTEGER_POINTER(rTempCheckOrders)[0];
-	maxIter = INTEGER_POINTER(rMaxIter)[0];
-	orderShuffles = NUMERIC_POINTER(rOrderShuffles)[0];
-	stopDiff = NUMERIC_POINTER(rStopDiff)[0];
-	m_nDrives = INTEGER_POINTER(rThreads)[0];
+	maxIter         = INTEGER_POINTER(rMaxIter)[0];
+	orderShuffles   = NUMERIC_POINTER(rOrderShuffles)[0];
+	stopDiff        = NUMERIC_POINTER(rStopDiff)[0];
+	m_nDrives       = INTEGER_POINTER(rThreads)[0];
+
 	if (m_nDrives < 1)
 		m_nDrives = 1;
 	m_bUseCache = LOGICAL(rUseCache)[0];
@@ -309,6 +327,10 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 	m_numSamples = INTEGER(dim)[1];
 
 	m_pOptOrder = (int*) CATNET_MALLOC(m_numNodes * sizeof(int));
+	if (!m_pOptOrder) {
+		CATNET_MEM_ERR();
+	}
+
 	PROTECT(rStartOrder = AS_INTEGER(rStartOrder));
 	if (length(rStartOrder) < m_numNodes) {
 		warning("Invalid nodeStartOrder parameter - reset to default node order.");
@@ -329,10 +351,14 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 		PROTECT(rNodeNames = AS_VECTOR(rNodeNames));
 		if (length(rNodeNames) == m_numNodes) {
 			pNodeNames = (char**) CATNET_MALLOC(m_numNodes * sizeof(char*));
+			if (!pNodeNames) {
+				CATNET_MEM_ERR();
+			}
 			for (i = 0; i < m_numNodes; i++) {
 				pstr = CHARACTER_VALUE(VECTOR_ELT(rNodeNames, i));
 				pNodeNames[i] = (char*) CATNET_MALLOC((strlen(pstr) + 1) * sizeof(char));
-				memcpy(pNodeNames[i], pstr, (strlen(pstr) + 1) * sizeof(char));
+				if (pNodeNames[i] && pstr)
+					memcpy(pNodeNames[i], pstr, (strlen(pstr) + 1) * sizeof(char));
 			}
 		}
 		UNPROTECT(1);
@@ -343,23 +369,35 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 		bjump = 1;
 		orderShuffles = -orderShuffles;
 	}
-	minShuffles = (int) (orderShuffles);
+	minShuffles   = (int) (orderShuffles);
 	orderShuffles = orderShuffles - minShuffles;
 
-	m_pTestOrder = (int**) CATNET_MALLOC(m_nDrives * sizeof(int*));
-	memset(m_pTestOrder, 0, m_nDrives * sizeof(int*));
-	m_pTestOrderInverse = (int**) CATNET_MALLOC(m_nDrives * sizeof(int*));
-	for (n = 0; n < m_nDrives; n++) {
-		m_pTestOrderInverse[n] = (int*) CATNET_MALLOC(m_numNodes * sizeof(int));
+	m_pTestOrder        =   (int**) CATNET_MALLOC(m_nDrives * sizeof(int*));
+	m_pTestOrderInverse =   (int**) CATNET_MALLOC(m_nDrives * sizeof(int*));
+	newOrdProb          = (double*) CATNET_MALLOC(m_nDrives * sizeof(double));
+	if (!m_pTestOrder || !m_pTestOrderInverse || !newOrdProb) {
+		CATNET_MEM_ERR();
 	}
 
-	newOrdProb = (double*) CATNET_MALLOC(m_nDrives * sizeof(double));
+	memset(m_pTestOrder, 0, m_nDrives * sizeof(int*));
+	for (n = 0; n < m_nDrives; n++) {
+		m_pTestOrderInverse[n] = (int*) CATNET_MALLOC(m_numNodes * sizeof(int));
+		if (!m_pTestOrderInverse[n]) {
+			CATNET_MEM_ERR();
+		}
+	}
 	memset(newOrdProb, 0, m_nDrives * sizeof(double));
 
 	m_pDrives = (CATNETD_SEARCH<double>**) CATNET_MALLOC(
 			m_nDrives * sizeof(CATNETD_SEARCH<double>*));
+	if (!m_pDrives) {
+		CATNET_MEM_ERR();
+	}
 	for (n = 0; n < m_nDrives; n++) {
 		m_pDrives[n] = new CATNETD_SEARCH<double> ();
+		if (!m_pDrives[n]) {
+			CATNET_MEM_ERR();
+		}
 	}
 
 	if (m_bUseCache) {
@@ -392,6 +430,9 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 
 	m_pSearchParams = (SEARCH_PARAMETERS**) CATNET_MALLOC(m_nDrives
 			* sizeof(SEARCH_PARAMETERS*));
+	if (!m_pSearchParams) {
+		CATNET_MEM_ERR();
+	}
 	for (n = 0; n < m_nDrives; n++) {
 		m_pSearchParams[n] = new SEARCH_PARAMETERS(m_numNodes, m_numSamples,
 				m_maxParentSet, maxComplexity, (m_nDrives < 2) ? echo : 0, 
@@ -400,17 +441,20 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 				!isNull(rParentsPool), !isNull(rFixedParentsPool), 
 				!isNull(rMatEdgeLiks), maxParentsPool, 
 				m_bUseCache ? &m_cache_mutex : NULL, m_pDrives[n]);
+		if (!m_pSearchParams[n]) {
+			CATNET_MEM_ERR();
+		}
 	}
 
 	fOptLogLik = -FLT_MAX;
 	m_nOptNets = 0;
 	m_pOptNets = NULL;
-	pOptNet = NULL;
+	pOptNet    = NULL;
 
-	nstop = 0;
-	nstopCounter = 0;
-	naccept = 0;
-	tempCur = tempStart;
+	nstop            = 0;
+	nstopCounter     = 0;
+	naccept          = 0;
+	tempCur          = tempStart;
 	nLastChangedTemp = 0;
 
 	if (echo && m_numNodes < 32) {
@@ -466,11 +510,12 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 
 			if (!isNull(rParentSizes) && length(rParentSizes) == m_numNodes) {
 				pParentSizes = m_pSearchParams[n]->m_pParentSizes;
-				memcpy(pParentSizes, INTEGER(rParentSizes), m_numNodes
-						* sizeof(int));
-				for (i = 0; i < m_numNodes; i++)
-					pParentSizes[i] = INTEGER(rParentSizes)[m_pTestOrder[n][i]
-							- 1];
+				if (pParentSizes) {
+					memcpy(pParentSizes, INTEGER(rParentSizes), m_numNodes * sizeof(int));
+					for (i = 0; i < m_numNodes; i++)
+						pParentSizes[i] = 
+						INTEGER(rParentSizes)[m_pTestOrder[n][i] -1];
+				}
 			}
 
 			pSamples = (int*)m_pSearchParams[n]->m_pSamples;
@@ -500,8 +545,10 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 					if(isVector(rnodecat) && len > 0) {
 						m_pSearchParams[n]->m_pNodeNumCats[i] = len;
 						m_pSearchParams[n]->m_pNodeCats[i] = (int*)CATNET_MALLOC(len*sizeof(int));
-						for(j = 0; j < len; j++)
-							m_pSearchParams[n]->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+						if (m_pSearchParams[n]->m_pNodeCats[i]) {
+							for(j = 0; j < len; j++)
+								m_pSearchParams[n]->m_pNodeCats[i][j] = INTEGER(rnodecat)[j];
+						}
 					}
 				}
 			}
@@ -588,8 +635,6 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 				}
 			}
 
-			m_pSearchParams[n]->m_seed = rand();
-
 			m_pDrives[n] -> _start_thread(CatnetSearchSaThreadProc, m_pSearchParams[n]);
 		} // for(n = 0; n < m_nDrives; n++)
 
@@ -671,15 +716,19 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 					pOptNet = pCurNet;
 					fOptLogLik = fLogLik;
 					if (m_pOptNets) {
-						for (i = 0; i < m_nOptNets; i++)
+						for (i = 0; i < m_nOptNets; i++) {
 							if (m_pOptNets[i]) {
 								delete m_pOptNets[i];
 							}
+						}
 						CATNET_FREE( m_pOptNets);
 					}
 					m_nOptNets = nCatnets;
 					m_pOptNets = (CATNETD<double>**) CATNET_MALLOC(
-									nCatnets * sizeof(CATNETD<double>*));
+								nCatnets * sizeof(CATNETD<double>*));
+					if (!m_pOptNets) {
+						CATNET_MEM_ERR();
+					}
 					// careful here
 					memcpy(m_pOptNets, pCatnets, nCatnets * sizeof(CATNETD<double>*));
 					memset(pCatnets, 0, nCatnets * sizeof(CATNETD<double>*));
@@ -691,20 +740,26 @@ SEXP RCatnetSearchSA::search(SEXP rNodeNames, SEXP rSamples,
 					acceptprob = 0;
 					if(tempCur > 0 && deltaLogLik <= 0)
 						acceptprob = (double) exp((double)deltaLogLik/(double)tempCur);
-					ftemp = ((double) rand() / (double) RAND_MAX);
+					GetRNGstate();
+					ftemp = (double)unif_rand();
+					PutRNGstate();
 					if (deltaLogLik > 0 || ftemp < acceptprob) {
 						pOptNet = pCurNet;
 						fOptLogLik = fLogLik;
 						if (m_pOptNets) {
-							for (i = 0; i < m_nOptNets; i++)
+							for (i = 0; i < m_nOptNets; i++) {
 								if (m_pOptNets[i]) {
 									delete m_pOptNets[i];
 								}
+							}
 							CATNET_FREE( m_pOptNets);
 						}
 						m_nOptNets = nCatnets;
 						m_pOptNets = (CATNETD<double>**) CATNET_MALLOC(
-										nCatnets * sizeof(CATNETD<double>*));
+								nCatnets * sizeof(CATNETD<double>*));
+						if (!m_pOptNets) {
+							CATNET_MEM_ERR();
+						}
 						// careful here
 						memcpy(m_pOptNets, pCatnets, nCatnets * sizeof(CATNETD<double>*));
 						memset(pCatnets, 0, nCatnets * sizeof(CATNETD<double>*));

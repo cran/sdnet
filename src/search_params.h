@@ -135,7 +135,9 @@ struct SEARCH_PARAMETERS {
 
 		m_seed = nSeed;
 		if(nSeed == 0) {
-			m_seed = rand();
+			GetRNGstate();
+			m_seed = (double)RAND_MAX*(double)unif_rand();
+			PutRNGstate();
 		}
 	}
 

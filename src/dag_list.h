@@ -85,27 +85,35 @@ struct DAG_PARS {
 		numNodes = nNumNodes;
 		BITS_PER_INDEX(nbits, maxpars);
 		numParSize = (int)(1+(numNodes*nbits/8));
-//printf("nbits = %d, maxpars = %d, numParsSize = %d\n", nbits, maxpars, numParSize);
 		numPars = (char*)CATNET_MALLOC(numParSize*sizeof(char));
-		memset(numPars, 0, numParSize*sizeof(char));
+		if (numPars)
+			memset(numPars, 0, numParSize*sizeof(char));
 		loglik = 0;
 		complx = 0;
 		next = 0;
 	}
 	DAG_PARS(const DAG_PARS<t_prob> *pdag) {
+		if (!pdag)
+			return;
 		numNodes = pdag->numNodes;
 		nbits = pdag->nbits;
 		numParSize = pdag->numParSize;
 		numPars = (char*)CATNET_MALLOC(numParSize*sizeof(char));
-		memcpy(numPars, pdag->numPars, numParSize*sizeof(char));
+		if (numPars && pdag->numPars)
+			memcpy(numPars, pdag->numPars, numParSize*sizeof(char));
 		loglik = pdag->loglik;
 		complx = pdag->complx;
 		next = 0;
 	}
 	void copyNumPars(const DAG_PARS<t_prob> *pdag) {
-		memcpy(numPars, pdag->numPars, numParSize*sizeof(char));
+		if (!pdag)
+			return;
+		if (numPars && pdag->numPars)
+			memcpy(numPars, pdag->numPars, numParSize*sizeof(char));
 	}
 	int getNumPars(int ind) {
+		if (!numPars)
+			return 0;
 		int nbyte = (int)(ind*nbits/8);
 		int noff = ind*nbits-8*nbyte;
 		if(nbits <= 8)
@@ -114,34 +122,26 @@ struct DAG_PARS {
 			return(*((int*)(numPars+nbyte)));
 	}
 	void setNumPar(int ind, int npars) {
-/*printf("\nnumPars: ");
-for(int i = 0; i < numParSize; i++)
-printf("%d ", numPars[i]);
-printf("\n");*/
+		if (!numPars)
+			return;
 		int nbyte = (int)(ind*nbits/8);
-		int noff = ind*nbits-8*nbyte;
+		int noff  = ind*nbits-8*nbyte;
 		if(nbits <= 8) 
 			numPars[nbyte] = (numPars[nbyte] & ~(((1<<nbits)-1) << noff)) 
 					| (npars&((1<<nbits)-1)) << noff;
 		else {
 			*((int*)(numPars+nbyte)) = npars;
 		}
-/*printf("set %d, %d", ind, npars);
-printf("new numPars: ");
-for(int i = 0; i < numParSize; i++)
-printf("%d ", numPars[i]);
-printf("\n");*/
 	}
 	int compressNumPars(int *pIntBuff, char *pByteBuff, int &nBuffSize, int *pOrder/*[1:numNodes]*/) {
 		int nbyte, noff, i, j, k;
-		if(nBuffSize < numNodes || !pIntBuff || !pByteBuff)
+
+		if(!numPars || nBuffSize < numNodes || !pIntBuff || !pByteBuff || !pOrder)
 			return 0;
+
 		nbyte = 0;
-		noff = 0;
-/*printf("numPars: ");
-for(i = 0; i < numParSize; i++)
-printf("%d ", numPars[i]);
-printf("\n");*/
+		noff  = 0;
+
 		if(nbits <= 8) {
 			for(i = 0; i < numNodes; i++) {
 				pIntBuff[pOrder[i]-1] = (int)((numPars[nbyte] >> noff)&((1<<nbits)-1));
@@ -155,10 +155,6 @@ printf("\n");*/
 		else 
 			for(i = 0; i < numNodes; i++) 
 				pIntBuff[pOrder[i]-1] = *((int*)numPars+i);
-/*printf("pbuff: ");
-for(i = 0; i < numNodes; i++)
-printf("%d ", pIntBuff[i]);
-printf("\n");*/
 		*((int*)pByteBuff) = nbits;
 		if(nbits <= 8) {
 			nBuffSize = (int)sizeof(int);
@@ -185,7 +181,6 @@ printf("\n");*/
 				k = pIntBuff[i];
 				j = 1;
 				while(i+j < numNodes && pIntBuff[i+j] == k && j < (1<<(8*sizeof(int)-2))) j++;
-//printf("i = %d, j = %d[%d]\n", i,j,(1<<(8*sizeof(int)-2)));
 				if(j <= 2) {
 					while(j-- > 0)
 						pout[nBuffSize++] = pIntBuff[i++];
@@ -197,10 +192,7 @@ printf("\n");*/
 			}
 			nBuffSize *= (int)sizeof(int);
 		}
-/*printf("  cbuff(%d): ", nBuffSize);
-for(i = 0; i < nBuffSize; i++)
-printf("%d ", pByteBuff[i]);
-printf("\n");*/
+
 		return nBuffSize;
 	}
 };
@@ -224,11 +216,11 @@ struct DAG_LIST {
 	}
 
 	DAG_LIST() {
-		m_numNodes = 0;
+		m_numNodes    = 0;
 		m_numParSlots = 0;
-		m_parSlots = 0;
-		m_parLogliks = 0;
-		m_parComplx = 0;
+		m_parSlots    = 0;
+		m_parLogliks  = 0;
+		m_parComplx   = 0;
 		m_parSampleSize = 0;
 		m_numDags = 0;
 		m_dagPars = 0;
@@ -257,11 +249,11 @@ struct DAG_LIST {
 			CATNET_FREE(m_parSampleSize);
 		if(m_dagPars)
 			delete m_dagPars;
-		m_numNodes = 0;
+		m_numNodes    = 0;
 		m_numParSlots = 0;
-		m_parSlots = 0;
-		m_parLogliks = 0;
-		m_parComplx = 0;
+		m_parSlots    = 0;
+		m_parLogliks  = 0;
+		m_parComplx   = 0;
 		m_parSampleSize = 0;
 		m_numDags = 0;
 		m_dagPars = 0;

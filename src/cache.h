@@ -41,13 +41,16 @@ struct CATNET_CACHE_EL {
 	CATNET_CACHE_EL(int *ppool, int npool, int node, int *parset, int parsetsize, PROB_LIST<t_prob> *probNode, t_prob flik) {
 		nPool = npool;
 		pPool = (int*)CATNET_MALLOC(npool*sizeof(int));
-		memcpy(pPool, ppool, npool*sizeof(int));
+		if (pPool)
+			memcpy(pPool, ppool, npool*sizeof(int));
 		nnode = node;
 		npars = parsetsize;
 		pPars = (int*)CATNET_MALLOC(npars*sizeof(int));
-		memcpy(pPars, parset, npars*sizeof(int));
+		if (pPars)
+			memcpy(pPars, parset, npars*sizeof(int));
 		pNodeProb = new PROB_LIST<t_prob>;
-		*pNodeProb = *probNode;
+		if (pNodeProb && probNode)
+			*pNodeProb = *probNode;
 		fLogLik = flik;
 	}
 
