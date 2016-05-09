@@ -9,7 +9,7 @@
 }
 
 \usage{
-sdnLearn(data, cls, clslevs = NULL, ncats = 3, nodeCats = NULL, std=TRUE)
+sdnLearn(data, cls, clslevs = NULL, ncats = 3, nodeCats = NULL, quant="uniform", std=TRUE)
 sdnPredict(model, data, std=TRUE) 
 sdnEvaluate(train, test, ncats = 3, nodeCats = NULL, std=FALSE)
 }
@@ -22,6 +22,7 @@ sdnEvaluate(train, test, ncats = 3, nodeCats = NULL, std=FALSE)
 \item{clslevs}{an optional vector of labels, should include training data's labels}
 \item{ncats}{an \code{integer}, the number of categories per node}
 \item{nodeCats}{a \code{list}, custom node categories}
+\item{quant}{quantization method}
 \item{std}{a \code{logical}, should the data rows be standardized}
 \item{model}{a \code{list} of components for the training model}
 }

@@ -30,12 +30,13 @@ sdnConsolidate <- function(train, test) {
   return(list(train, test))
 }
 
+
 ## train and test have the following components 
 ## geneset: gene subset
 ## cdata: expression data as gene-row matrix
 ## cls:: class labels 
 
-sdnLearn <- function(data, cls, clslevs = NULL, ncats = 3, nodeCats = NULL, std=TRUE) {
+sdnLearn <- function(data, cls, clslevs = NULL, ncats = 3, nodeCats = NULL, quant="uniform", std=TRUE) {
 
   if(!is.numeric(data)||!is.matrix(data))
     stop("Numeric matrix expected")
@@ -76,7 +77,6 @@ sdnLearn <- function(data, cls, clslevs = NULL, ncats = 3, nodeCats = NULL, std=
   }
   
   ## soft discretization
-  quant <- "quantile"
   qdata <- sdnet::cnDiscretize(data, ncats, mode="soft", marginal=quant, learnset=1:ncol(data), cover=0.95)
   pdata <- qdata$pdata
   rm(qdata)

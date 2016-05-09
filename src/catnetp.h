@@ -414,7 +414,7 @@ public:
 		int i, j, nline, *pnodepars, nodepars, ncats, listind;
 		/* psamples have categories in the range [1, m_maxCategories] */
 		t_prob *pnodeprob, *plist, floglik;
-
+		
 		if (!m_pProbLists || !psamples || nsamples < 1) {
 			return (t_prob)-FLT_MAX;
 		}
@@ -428,7 +428,7 @@ public:
 
 		pnodeprob = m_pProbLists[nnode]->pProbs;
 		pnodepars = m_parents[nnode];
-		nodepars = m_numParents[nnode];
+		nodepars  = m_numParents[nnode];
 
 		ncats = m_numCategories[nnode];
 		for(i = 0; i < nodepars; i++) 
@@ -489,8 +489,8 @@ public:
 
 		pnodepars = m_parents[nnode];
 		nodepars = m_numParents[nnode];
-		ncats = m_numCategories[nnode];
 
+		ncats = m_numCategories[nnode];
 		for(i = 0; i < nodepars; i++) 
 			ncats *= m_numCategories[pnodepars[i]];
 		plist = (t_prob*) CATNET_MALLOC(ncats * sizeof(t_prob));

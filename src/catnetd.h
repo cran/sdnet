@@ -62,15 +62,18 @@ public:
 		if(!psamples || nsamples < 1)
 			return 0;
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		if (!pnodesample)
-			return 0;
+		pnodesample = 0;
+		if (m_maxParents > 0) {
+			pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		}
 
 		pnodepars = m_parents[nnode];
 		ncount = 0;
 		for (j = 0; j < nsamples; j++) {
-			for (ipar = 0; ipar < nodepars; ipar++) {
-				pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+			if (pnodesample) {
+				for (ipar = 0; ipar < nodepars; ipar++) {
+					pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+				}
 			}
 			pnodeprob = m_pProbLists[nnode]->find_slot(0, pnodesample, 0);
 			if(!pnodeprob)
@@ -102,9 +105,10 @@ public:
 		if(!psamples || nsamples < 1)
 			return 0;
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		if (!pnodesample)
-			return 0;
+		pnodesample = 0;
+		if (m_maxParents > 0) {
+			pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		}
 
 		m_loglik = 0;
 		for (i = 0; i < m_numNodes; i++) {
@@ -115,8 +119,10 @@ public:
 			ncount = 0;
 			nodeloglik = 0;
 			for (j = 0; j < nsamples; j++) {
-				for (ipar = 0; ipar < nodepars; ipar++) {
-					pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+				if (pnodesample) {
+					for (ipar = 0; ipar < nodepars; ipar++) {
+						pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+					}
 				}
 				pnodeprob = m_pProbLists[i]->find_slot(0, pnodesample, 0);
 				if(!pnodeprob)
@@ -154,9 +160,11 @@ public:
 		if(!psamples || nsamples < 1)
 			return 0;
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		if (!pnodesample)
-			return 0;
+		pnodesample = 0;
+		if (m_maxParents > 0) {
+			pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		}
+
 		ploglik = (t_prob*) CATNET_MALLOC(m_numNodes * sizeof(t_prob));
 		if (!ploglik) {
 			CATNET_FREE(pnodesample);
@@ -174,9 +182,11 @@ public:
 			for (j = 0; j < nsamples; j++) {
 				// check for perturbation
 				if(pert && pert[j * m_numNodes + i])
-					continue; 
-				for (ipar = 0; ipar < nodepars; ipar++) {
-					pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+					continue;
+				if (pnodesample) {
+					for (ipar = 0; ipar < nodepars; ipar++) {
+						pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+					}
 				}
 				pnodeprob = m_pProbLists[i]->find_slot(0, pnodesample, 0);
 				if(!pnodeprob)
@@ -208,9 +218,11 @@ public:
 		if(!psamples || nsamples < 1)
 			return 0;
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		if (!pnodesample)
-			return 0;
+		pnodesample = 0;
+		if (m_maxParents > 0) {
+			pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		}
+
 		ploglik = (t_prob*) CATNET_MALLOC(nsamples * sizeof(t_prob));
 		if (!ploglik) {
 			CATNET_FREE(pnodesample);
@@ -228,8 +240,10 @@ public:
 				// check for perturbation
 				if(pert && pert[j * m_numNodes + i])
 					continue; 
-				for (ipar = 0; ipar < nodepars; ipar++) {
-					pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+				if (pnodesample) {
+					for (ipar = 0; ipar < nodepars; ipar++) {
+						pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+					}
 				}
 				pnodeprob = m_pProbLists[i]->find_slot(0, pnodesample, 0);
 				if(!pnodeprob)
@@ -255,7 +269,7 @@ public:
 		/* psamples have categories in the range [1, m_maxCategories] */
 		t_prob *pnodeprob, loglik;
 		int nodepars, ncount;
-		int *pnodepars, *pnodesample=0, samp;
+		int *pnodepars, *pnodesample, samp;
 
 		if(!psamples || nsamples < 1 || nnode < 0 || nnode >= m_numNodes)
 			return 0;
@@ -265,17 +279,20 @@ public:
 
 		loglik = 0;
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));	
-		if (!pnodesample)
-			return 0;
+		pnodesample = 0;
+		if (m_maxParents > 0) {
+			pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		}
 
 		pnodepars = m_parents[nnode];
 		nodepars = m_numParents[nnode];
 
 		ncount = 0;	
 		for (j = 0; j < nsamples; j++) {
-			for (ipar = 0; ipar < nodepars; ipar++) 
-				pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+			if (pnodesample) {
+				for (ipar = 0; ipar < nodepars; ipar++) 
+					pnodesample[ipar] = psamples[j * m_numNodes + pnodepars[ipar]];
+			}
 			pnodeprob = m_pProbLists[nnode]->find_slot(0, pnodesample, 0);
 
 			samp = psamples[j * m_numNodes + nnode];
@@ -322,17 +339,20 @@ public:
 		}
 		m_pProbLists[nnode]->set_zero();
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		if (!pnodesample)
-			return 0;
+		pnodesample = 0;
+		if (m_maxParents > 0) {
+			pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		}
 
 		pnodepars = m_parents[nnode];
 		ncount = 0;
 		for (j = 0; j < nsamples; j++) {
-			for (i = 0; i < m_numParents[nnode]; i++) {
-				if (pnodepars[i] < 0 || pnodepars[i] >= m_numNodes)
-					CATNET_ERR("pnodepars[i]");
-				pnodesample[i] = psamples[j * m_numNodes + pnodepars[i]];
+			if (pnodesample) {
+				for (i = 0; i < m_numParents[nnode]; i++) {
+					if (pnodepars[i] < 0 || pnodepars[i] >= m_numNodes)
+						CATNET_ERR("pnodepars[i]");
+					pnodesample[i] = psamples[j * m_numNodes + pnodepars[i]];
+				}
 			}
 			pnodeprob = m_pProbLists[nnode]->find_slot(0, pnodesample, 0);
 			// if there are NAs, pnodeprob maybe 0
@@ -342,6 +362,7 @@ public:
 				ncount++;
 			}
 		}
+
 		CATNET_FREE(pnodesample);
 
 		/* keep sample sizes */
@@ -384,18 +405,21 @@ public:
 		m_pProbLists[nnode]->set_zero();
 		pClassProb->set_zero();
 
-		pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		if (!pnodesample)
-			return 0;
+		pnodesample = 0;
+		if (m_maxParents > 0) {
+			pnodesample = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+		}
 
 		pnodepars = m_parents[nnode];
 		ncount = 0;
 		nclasscount = 0;
 		for (j = 0; j < nsamples; j++) {
-			for (i = 0; i < m_numParents[nnode]; i++) {
-				if (pnodepars[i] < 0 || pnodepars[i] >= m_numNodes)
-					CATNET_ERR("pnodepars[i]");
-				pnodesample[i] = psamples[j * m_numNodes + pnodepars[i]];
+			if (pnodesample) {
+				for (i = 0; i < m_numParents[nnode]; i++) {
+					if (pnodepars[i] < 0 || pnodepars[i] >= m_numNodes)
+						CATNET_ERR("pnodepars[i]");
+					pnodesample[i] = psamples[j * m_numNodes + pnodepars[i]];
+				}
 			}
 			pnodeprob = m_pProbLists[nnode]->find_slot(0, pnodesample, 0);
 			// if there are NAs, pnodeprob maybe 0

@@ -1,7 +1,9 @@
 
 importClassesFrom(methods, ANY, character, list, logical, matrix, missing, "NULL", numeric, vector)
-importFrom(methods, as, callGeneric, is, isVirtualClass, new, validObject)
-importFrom(stats, runif)
+importFrom("methods", "callGeneric", "as", "is", "isVirtualClass", "new", "validObject", "slotNames")
+importFrom("stats", "rbinom", "runif", "quantile", "median", "setNames")
+importFrom("utils", "packageVersion", "read.csv", "read.table", "str")
+importFrom("graphics", "par", "plot")
 
 exportClasses(catNetwork, catNetworkEvaluate, dagEvaluate, catNetworkDistance, CPDAG)
 

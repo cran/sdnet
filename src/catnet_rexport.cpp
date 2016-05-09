@@ -592,6 +592,7 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 			pSubSamples = (double*)CATNET_MALLOC(nlines*numsamples*sizeof(double));
 
 		for(nnode = 0; nnode < numnodes; nnode++) {
+
 			if(pPerturbations && pSubSamples) {
 				numsubsamples = 0;
 				for(j = 0; j < numsamples; j++) {
@@ -607,6 +608,7 @@ SEXP catnetSetProb(SEXP cnet, SEXP rSamples, SEXP rPerturbations) {
 			else {
 				rnet->CATNETP<double>::setNodeSampleProb(nnode, pSamples, numsamples, 1);
 			}
+		  
 		}
 
 		UNPROTECT(1); /* rSamples */

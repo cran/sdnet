@@ -318,8 +318,6 @@ public:
 		if (m_numParents[node] < 0 || m_numParents[node] > m_maxParents)
 			return;
 		int *parcats = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		if (!parcats)
-			return;
 		for (int i = 0; i < m_numParents[node]; i++) {
 			parcats[i] = m_numCategories[m_parents[node][i]];
 		}
@@ -485,8 +483,6 @@ public:
 			m_pProbLists[nnode] = new PROB_LIST<t_prob>;
 		if (m_pProbLists[nnode] && pprob) {
 			*m_pProbLists[nnode] = *pprob;
-			// normalize
-			//m_pProbLists[nnode]->normalize();
 		}
 		return m_pProbLists[nnode];
 	}
@@ -597,9 +593,18 @@ public:
 		parpoolsize++;
 		parpool = paux;
 
-		pcats     = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
-		paridx    = (int*) CATNET_MALLOC(parpoolsize  * sizeof(int));
-		blocksize = (int*) CATNET_MALLOC(parpoolsize  * sizeof(int));
+		pcats = 0;
+		if (m_maxParents > 0) {
+			pcats     = (int*) CATNET_MALLOC(m_maxParents * sizeof(int));
+			if (!pcats)
+				return 0;
+		}
+		paridx    = 0;
+		blocksize = 0;
+		if (parpoolsize > 0) {
+			paridx    = (int*) CATNET_MALLOC(parpoolsize  * sizeof(int));
+			blocksize = (int*) CATNET_MALLOC(parpoolsize  * sizeof(int));
+		}
 
 		if (!pcats || !paridx || !blocksize) {
 			CATNET_FREE(parpool);
@@ -658,7 +663,9 @@ public:
 				paridx[i] = ipar + 1;
 			}
 
-			memset(pcats, 0, m_maxParents * sizeof(int));
+			if (m_maxParents > 0) {
+				memset(pcats, 0, m_maxParents * sizeof(int));
+			}
 			for (ii = 0; ii < jointprobsize; ii += (blocksize[ipool] * m_numCategories[poolnode])) {
 
 				for (j = 0; j < ipool; j++) {
