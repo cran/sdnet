@@ -7,7 +7,7 @@ importFrom("graphics", "par", "plot")
 
 exportClasses(catNetwork, catNetworkEvaluate, dagEvaluate, catNetworkDistance, CPDAG)
 
-useDynLib(sdnet)
+useDynLib(sdnet, .registration = TRUE)
 
 exportMethods(
 	cnNumNodes, cnNodes, 

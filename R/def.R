@@ -116,13 +116,13 @@ cnNew <- function(nodes, cats, pars, probs = NULL, p.delta1=0.01, p.delta2=0.01,
   maxpars <- 0
   i <- 1
   for(par in pars) {
-    if(!is.null(par) && length(par) > 0 && par != "") {
+    if(!is.null(par)) {
       par <- sapply(par, function(pp)
-             if(is.character(pp))
-               return (which(nodes == pp)[1])
-             else
-               return(as.integer(pp))
-             )
+           if(is.character(pp))
+             return (which(nodes == pp)[1])
+           else
+             return(as.integer(pp))
+           )
       par <- par[par>=1 & par<= length(nodes)]
       pars[[i]] <- as.integer(par)
       if(maxpars < length(par))

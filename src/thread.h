@@ -1,6 +1,6 @@
 /*
  *  catnet : categorical Bayesian network inference
- *  Copyright (C) 1999--2010  Nikolay Balov
+ *  Copyright (C) 1999--2019  Nikolay Balov
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

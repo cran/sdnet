@@ -1,6 +1,6 @@
 /*
  *  catnet : categorical Bayesian network inference
- *  Copyright (C) 2009--2010  Nikolay Balov
+ *  Copyright (C) 2009--2019  Nikolay Balov
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -199,7 +199,7 @@ SEXP catnetFindParentPool(SEXP cnet, SEXP rnode)
 SEXP show_catnet(SEXP rnodes, SEXP rparents, SEXP rcatlist, SEXP rproblist)
 {
 	int i, m_numNodes, nnode;
-	char str[1024];
+	char *strbuff;
 	SEXP pf, pstr;
 
 	PROTECT(rnodes = AS_LIST(rnodes));
@@ -207,65 +207,58 @@ SEXP show_catnet(SEXP rnodes, SEXP rparents, SEXP rcatlist, SEXP rproblist)
 	PROTECT(rcatlist = AS_LIST(rcatlist));
 	PROTECT(rproblist = AS_LIST(rproblist));
 
-	//Rprintf("Call show_object.\n");
-
 	PROTECT(pstr = allocVector(STRSXP, 3));
 
 	m_numNodes = length(rnodes);
-	sprintf(str, "Nodes = %d: ", m_numNodes);
-	//Rprintf(str);
+	strbuff = (char*)CATNET_MALLOC(16+m_numNodes*m_numNodes*(2+MAX_NODE_NAME));
+	if (!strbuff) {
+		return R_NilValue;
+	}
+
+	sprintf(strbuff, "Nodes = %d: ", m_numNodes);
 
 	for(nnode = 0; nnode < m_numNodes; nnode++) {
 		PROTECT(pf = VECTOR_ELT(rnodes, nnode));
 		if(IS_VECTOR(pf)) {
-			sprintf(str, "%s%s, ", str, CHAR(STRING_ELT(pf, 0)));
-			//Rprintf(str);
-		}
-		else {
-			//Rprintf("");
+			sprintf(strbuff, "%s%s, ", strbuff, CHAR(STRING_ELT(pf, 0)));
 		}
 		UNPROTECT(1);
 	}
-	sprintf(str, "%s\n", str);
-	SET_STRING_ELT(pstr, 0, mkChar(str));
+	sprintf(strbuff, "%s\n", strbuff);
+	SET_STRING_ELT(pstr, 0, mkChar(strbuff));
 
-	//Rprintf("\n\nParents:\n");
-	sprintf(str, "Parents:\n");
+	sprintf(strbuff, "Parents:\n");
 
 	for(nnode = 0; nnode < m_numNodes; nnode++) {
 		PROTECT(pf = VECTOR_ELT(rparents, nnode));
-		sprintf(str, "%s[%d] ", str, nnode);
+		sprintf(strbuff, "%s[%d] ", strbuff, nnode);
 		if(IS_VECTOR(pf)) {
 			for(i = 0; i < length(pf); i++)
-				sprintf(str, "%s%d, ", str, INTEGER_POINTER(pf)[i]-1);
-			sprintf(str, "%s\n", str);
-			//Rprintf(str);
+				sprintf(strbuff, "%s%d, ", strbuff, INTEGER_POINTER(pf)[i]-1);
+			sprintf(strbuff, "%s\n", strbuff);
 		}
 		else
-			sprintf(str, "%s\n", str);
+			sprintf(strbuff, "%s\n", strbuff);
 		UNPROTECT(1);
 	}
-	SET_STRING_ELT(pstr, 1, mkChar(str));
+	SET_STRING_ELT(pstr, 1, mkChar(strbuff));
 
-	//Rprintf("\nCategories:\n");
-	sprintf(str, "Categories:\n");
+	sprintf(strbuff, "Categories:\n");
 
 	for(nnode = 0; nnode < m_numNodes; nnode++) {
 		PROTECT(pf = VECTOR_ELT(rcatlist, nnode));
 		if(IS_VECTOR(pf)) {
 			for(i = 0; i < length(pf); i++)
-				sprintf(str, "%s%s, ", str, CHAR(STRING_ELT(pf,i)));
-			sprintf(str, "%s\n", str);
-			//Rprintf(str);
-		}
-		else {
-			//Rprintf("null\n");
+				sprintf(strbuff, "%s%s, ", strbuff, CHAR(STRING_ELT(pf,i)));
+			sprintf(strbuff, "%s\n", strbuff);
 		}
 		UNPROTECT(1);
 	}
-	SET_STRING_ELT(pstr, 2, mkChar(str));
+	SET_STRING_ELT(pstr, 2, mkChar(strbuff));
 
 	UNPROTECT(5);
+
+	CATNET_FREE(strbuff);
 
 	return pstr;
 }
@@ -814,6 +807,7 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 				CATNET_PARAM_ERR();
 			pSubSamples = 0;
 			pPerturbations = 0;
+			floglik = -FLT_MAX;
 			if(!isNull(rPerturbations)) {
 				PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 				pPerturbations = INTEGER(rPerturbations);
@@ -867,6 +861,7 @@ SEXP catnetNodeLoglik(SEXP cnet, SEXP rNode, SEXP rSamples, SEXP rPerturbations,
 			nnode = pnodes[i] - 1;
 			pSubSamples = 0;
 			pPerturbations = 0;
+			floglik = -FLT_MAX;
 			if(!isNull(rPerturbations)) {
 				PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 				pPerturbations = INTEGER(rPerturbations);

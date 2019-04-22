@@ -1,6 +1,6 @@
 /*
  *  catnet : categorical Bayesian network inference
- *  Copyright (C) 2009--2010  Nikolay Balov
+ *  Copyright (C) 2009--2019  Nikolay Balov
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -46,6 +46,7 @@ static const R_CallMethodDef R_CallDef[] = {
 void R_init_sdnet(DllInfo *info)
 {
 	R_registerRoutines(info,NULL,R_CallDef,NULL,NULL);
+	R_useDynamicSymbols(info, TRUE);
 	g_memcounter = 0;
 	// to disable C stack limit
 	//R_CStackLimit = (uintptr_t)-1;

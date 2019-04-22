@@ -1,6 +1,6 @@
 /*
  *  catnet : categorical Bayesian network inference
- *  Copyright (C) 2009--2010  Nikolay Balov
+ *  Copyright (C) 2009--2019  Nikolay Balov
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -168,7 +168,7 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 	char str[256];
 	int node, i, *pslotcats, *pn;
 	double *pf, floglik;
-	SEXP plist, ppars, pcats, pnodeprobs, rNodeNames, pint;
+	SEXP plist, ppars, pcats, pnodeprobs, rNodeNames, pint, pstr;
 
 	if(strcmp(objectName, "catNetwork") && strcmp(objectName, "catNetworkC") ) 
 		return R_NilValue;
@@ -276,7 +276,9 @@ SEXP RCATNET_CLASS::genRcatnet(const char * objectName = (const char*)"catNetwor
 	if (pslotcats)
 		CATNET_FREE(pslotcats);
 
-	SET_SLOT(cnet, install("meta"), mkString("catNetwork object"));
+	pstr = PROTECT(mkString("catNetwork object"));
+	SET_SLOT(cnet, install("meta"), pstr);
+	UNPROTECT(1); /* pstr */
 
 	PROTECT(pint = NEW_INTEGER(1));
 	INTEGER_POINTER(pint)[0] = complexity();
@@ -311,8 +313,8 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	int numDags, nIndex, node, i, n, k, nbits;
 	int nIntBuff, *pIntBuff, *pParBuff, *pParIndex;
 	char *pByteBuff;
-	const char *pstr;
-	SEXP rslot, rnodes, plist, poldlist, ppars, pcats, poldcats, rNodeNames, pint;
+	const char *pchar;
+	SEXP rslot, rnodes, plist, poldlist, ppars, pcats, poldcats, rNodeNames, pint, pstr;
 
 	if(!isS4(rDagEval))
 		CATNET_PARAM_ERR();
@@ -353,10 +355,10 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 			CATNET_FREE(m_nodeNames[node]);
 		m_nodeNames[node] = 0;
 		if(length(rNodeNames) > 0) {
-			pstr = CHAR(asChar(rNodeNames));
-			m_nodeNames[node] = (char*)CATNET_MALLOC((strlen(pstr)+1) * sizeof(char));
-			if (m_nodeNames[node] && pstr)
-				strcpy(m_nodeNames[node], pstr);
+			pchar = CHAR(asChar(rNodeNames));
+			m_nodeNames[node] = (char*)CATNET_MALLOC((strlen(pchar)+1) * sizeof(char));
+			if (m_nodeNames[node] && pchar)
+				strcpy(m_nodeNames[node], pchar);
 		}
 	}
 	UNPROTECT(1);
@@ -439,19 +441,18 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	}
 
  	plist = GET_SLOT(rDagEval, install("parSlots"));
+	PROTECT(plist = AS_LIST(plist));
 	if(length(plist) != m_numNodes)
 		CATNET_ERR("Wrong parSlots slot");
-	PROTECT(plist = AS_LIST(plist));
 	for(node = 0; node < m_numNodes; node++) {
-		PROTECT(ppars = AS_INTEGER(ppars));
-		ppars = VECTOR_ELT(plist, node);
+		PROTECT(ppars = VECTOR_ELT(plist, node));
 		if(pParIndex[node] < 0 || length(ppars) < (pParIndex[node]+1)*m_maxParents) {
 			sprintf(str, "Wrong parSlots for node %d", node+1);
 			CATNET_ERR(str);
 		}
 		if (m_maxParents > 0)
 			memcpy(pParBuff, INTEGER_POINTER(ppars) + pParIndex[node]*m_maxParents, m_maxParents*sizeof(int));
-		UNPROTECT(1);
+		UNPROTECT(1); // ppars
 		i = 0;
 		while(pParBuff[i] != 0 && i < m_maxParents) 
 			i++;
@@ -470,7 +471,8 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	CATNET_FREE(pIntBuff);
 	pIntBuff = 0;
 
-	SEXP cnet = PROTECT(NEW_OBJECT(MAKE_CLASS("catNetwork")));
+	SEXP cnetclass = PROTECT(MAKE_CLASS("catNetwork"));
+	SEXP cnet = PROTECT(NEW_OBJECT(cnetclass));
 
 	PROTECT(plist = allocVector(STRSXP, 1));
 	SET_STRING_ELT(plist, 0, mkChar("catNetwork"));
@@ -493,12 +495,11 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 		}
 	}
 	SET_SLOT(cnet, install("nodes"), rNodeNames);
- 	UNPROTECT(1);
 
 	PROTECT(pint = NEW_INTEGER(1));
 	INTEGER_POINTER(pint)[0] = m_maxParents;
 	SET_SLOT(cnet, install("maxpars"), pint);
-	UNPROTECT(1);
+	UNPROTECT(1); // pint
 
 	PROTECT(plist = allocVector(VECSXP, m_numNodes));
 	for(node = 0; node < m_numNodes; node++) {
@@ -514,12 +515,12 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	}
 	setAttrib(plist, R_NamesSymbol, rNodeNames);
 	SET_SLOT(cnet, install("pars"), plist);
-	UNPROTECT(1);
+	UNPROTECT(1); // plist
 
 	PROTECT(pint = NEW_INTEGER(1));
 	INTEGER_POINTER(pint)[0] = m_maxCategories;
 	SET_SLOT(cnet, install("maxcats"), pint);
-	UNPROTECT(1);
+	UNPROTECT(1); // pint
 
 	poldlist = GET_SLOT(rDagEval, install("cats"));
 	if(length(poldlist) != m_numNodes)
@@ -527,52 +528,58 @@ SEXP RCATNET_CLASS::genRcatnetFromDagEvaluate(SEXP rDagEval, SEXP rDagIndex) {
 	PROTECT(poldlist = AS_LIST(poldlist));
 	PROTECT(plist = allocVector(VECSXP, m_numNodes));
 	for(node = 0; node < m_numNodes; node++) {
-		poldcats = AS_LIST(VECTOR_ELT(poldlist, node));
+		PROTECT(poldcats = AS_LIST(VECTOR_ELT(poldlist, node)));
 		m_numCategories[node] = length(poldcats);
-		if(m_numCategories[node] > m_maxCategories)
+		if(m_numCategories[node] > m_maxCategories) {
+			UNPROTECT(1); // poldcats
 			CATNET_ERR("Wrong categories slot");
+		}
 		PROTECT(pcats = allocVector(STRSXP, m_numCategories[node]));
 		for(i = 0; i < m_numCategories[node]; i++) {
 			SET_STRING_ELT(pcats, i, asChar(VECTOR_ELT(poldcats, i)));
 		}
 		SET_VECTOR_ELT(plist, node, pcats);
-		UNPROTECT(1);
+		UNPROTECT(2); // poldcats, pcats
 	}
 	setAttrib(plist, R_NamesSymbol, rNodeNames);
 	SET_SLOT(cnet, install("cats"), plist);
-	UNPROTECT(2);
+	UNPROTECT(2); // poldlist, plist
+
+	UNPROTECT(1); //rNodeNames
 
 	PROTECT(plist = allocVector(VECSXP, m_numNodes));
 	SET_SLOT(cnet, install("probs"), plist);
-	UNPROTECT(1);
+	UNPROTECT(1); // plist
 
-	SET_SLOT(cnet, install("meta"), mkString("dagEvaluate object"));
+	pstr = PROTECT(mkString("dagEvaluate object"));
+	SET_SLOT(cnet, install("meta"), pstr);
+	UNPROTECT(1); // pstr
 
 	PROTECT(pint = NEW_INTEGER(1));
 	INTEGER_POINTER(pint)[0] = m_complexity;
 	SET_SLOT(cnet, install("complx"), pint);
-	UNPROTECT(1);
+	UNPROTECT(1); // pint
 	
 	PROTECT(pint = NEW_NUMERIC(1));
 	NUMERIC_POINTER(pint)[0] = m_loglik;
 	SET_SLOT(cnet, install("loglik"), pint);
-	UNPROTECT(1);
+	UNPROTECT(1); // pint
 
 	plist = GET_SLOT(rDagEval, install("parSampleSize"));
+	PROTECT(plist = AS_LIST(plist));
 	if(length(plist) != m_numNodes)
 		CATNET_ERR("Wrong parSampleSize slot");
-	PROTECT(plist = AS_LIST(plist));
 	PROTECT(pint = NEW_INTEGER(m_numNodes));
 	for(node = 0; node < m_numNodes; node++) {
 		ppars = VECTOR_ELT(plist, node);
 		INTEGER_POINTER(pint)[node] = INTEGER_POINTER(ppars)[pParIndex[node]];
 	}
 	SET_SLOT(cnet, install("nodeSampleSizes"), pint);
-	UNPROTECT(2);
+	UNPROTECT(2); // pint, plist
 
 	CATNET_FREE(pParIndex);
 
-	UNPROTECT(1); // cnet
+	UNPROTECT(2); // cnet, cnetclass
 	return cnet;
 }
 
@@ -616,15 +623,15 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	
 	PROTECT(rNumSamples = AS_INTEGER(rNumSamples));
 	numsamples = INTEGER_POINTER(rNumSamples)[0];
-	UNPROTECT(1);
+	UNPROTECT(1); // rNumSamplesw
 
 	PROTECT(rNaRate = AS_NUMERIC(rNaRate));
 	fNaRate = NUMERIC_POINTER(rNaRate)[0];
-	UNPROTECT(1);
+	UNPROTECT(1); // rNaRate
 
 	pPerturbations = 0;
+	PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 	if(!isNull(rPerturbations)) {
-		PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 		pPerturbations = INTEGER(rPerturbations);
 	}
 
@@ -721,8 +728,7 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	}
 	PutRNGstate();
 
-	if(!isNull(rPerturbations))
-		UNPROTECT(1);
+	UNPROTECT(1); // rPerturbations
 
 	if(pnodesample)
 		CATNET_FREE(pnodesample);		
@@ -734,7 +740,7 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	pRsamples = (int*)INTEGER_POINTER(rsamples);
 	if (pRsamples && pSamples)
 		memcpy(pRsamples, pSamples, m_numNodes*numsamples*sizeof(int));
-	UNPROTECT(1);
+	UNPROTECT(1); // rsamples
 
 	CATNET_FREE(pSamples);
 
