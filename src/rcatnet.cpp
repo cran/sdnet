@@ -619,8 +619,8 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	double fNaRate;
 	int i, j, k, nnode, *pnodepars, *pnodesample, *porder;
 	double u, v, *pnodeprob;
-	PROB_LIST<double>* pProbList; 
-	
+	PROB_LIST<double>* pProbList;
+
 	PROTECT(rNumSamples = AS_INTEGER(rNumSamples));
 	numsamples = INTEGER_POINTER(rNumSamples)[0];
 	UNPROTECT(1); // rNumSamplesw
@@ -630,9 +630,9 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	UNPROTECT(1); // rNaRate
 
 	pPerturbations = 0;
-	PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 	if(!isNull(rPerturbations)) {
-		pPerturbations = INTEGER(rPerturbations);
+		PROTECT(rPerturbations);
+		pPerturbations = INTEGER_POINTER(rPerturbations);
 	}
 
 	porder = getOrder();
@@ -658,6 +658,7 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	GetRNGstate();
 	for(k = 0; k < m_numNodes; k++) {
 		nnode = porder[k];
+
 		pnodepars = m_parents[nnode];
 		pProbList = (PROB_LIST<double>*)getNodeProb(nnode);
 		if (!pProbList) {
@@ -728,7 +729,9 @@ SEXP RCATNET_CLASS::genSamples(SEXP rNumSamples, SEXP rPerturbations, SEXP rNaRa
 	}
 	PutRNGstate();
 
-	UNPROTECT(1); // rPerturbations
+	if(!isNull(rPerturbations)) {
+		UNPROTECT(1); // rPerturbations
+	}
 
 	if(pnodesample)
 		CATNET_FREE(pnodesample);		

@@ -52,7 +52,7 @@ setMethod("cnSamples", c("catNetwork"),
             naRate <- 0
           if(naRate>1)
             naRate <- 1
-          
+
           fast <- TRUE
           if(fast) {
             data <- .Call("ccnSamples", 

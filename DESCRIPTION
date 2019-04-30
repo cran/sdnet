@@ -1,6 +1,6 @@
 Package: sdnet
 Title: Soft-Discretization-Based Bayesian Network Inference
-Version: 2.4.0
+Version: 2.4.1
 Author: Nikolay Balov
 Description: Fitting discrete Bayesian networks using soft-discretized data.  Soft-discretization is based on mixture of normal distributions.  Also implemented is a supervised Bayesian network learning employing Kullback-Leibler divergence. For more information see Balov (2013) <DOI:10.1186/1755-8794-6-S3-S1>.
 Maintainer: Nikolay Balov <nhbalov@gmail.com>
@@ -14,7 +14,7 @@ Collate: class.R def.R graph2catnet.R dags.R probs.R joint.prob.R
         cluster.R bif.R xdsl.R quant.R expres.r zzz.R
 LazyLoad: yes
 Repository: CRAN
-Date/Publication: 2019-04-22 16:00:21 UTC
+Date/Publication: 2019-04-30 07:10:09 UTC
 URL: http://www.biomedcentral.com/1755-8794/6/S3/S1
-Packaged: 2019-04-22 14:24:21 UTC; nbalov
+Packaged: 2019-04-29 20:05:36 UTC; nbalov
 NeedsCompilation: yes

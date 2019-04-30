@@ -170,7 +170,7 @@ SEXP RCatnetSearchD::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses,
 	if(!isNull(rPerturbations)) {
 		PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 		pPerturbations = m_pSearchParams->m_pPerturbations;
-		pRperturbations = INTEGER(rPerturbations);
+		pRperturbations = INTEGER_POINTER(rPerturbations);
 		for(j = 0; j < m_numSamples; j++) {
 			for(i = 0; i < m_numNodes; i++) {
 				pPerturbations[j*m_numNodes + i] = pRperturbations[j*m_numNodes + m_pRorder[i] - 1];
@@ -442,7 +442,7 @@ SEXP RDagSearch::estimate(SEXP rSamples, SEXP rPerturbations, SEXP rClasses, SEX
 	if(!isNull(rPerturbations)) {
 		PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 		pPerturbations = m_pSearchParams->m_pPerturbations;
-		pRperturbations = INTEGER(rPerturbations);
+		pRperturbations = INTEGER_POINTER(rPerturbations);
 		for(j = 0; j < m_numSamples; j++) {
 			for(i = 0; i < m_numNodes; i++) {
 				pPerturbations[j*m_numNodes + i] = pRperturbations[j*m_numNodes + m_pRorder[i] - 1];
@@ -1088,7 +1088,7 @@ Rprintf("RCatnetSearchP\n");
 	if(!isNull(rPerturbations)) {
 		PROTECT(rPerturbations = AS_INTEGER(rPerturbations));
 		pPerturbations = m_pSearchParams->m_pPerturbations;
-		pRperturbations = INTEGER(rPerturbations);
+		pRperturbations = INTEGER_POINTER(rPerturbations);
 		for(j = 0; j < m_numSamples; j++) {
 			for(i = 0; i < m_numNodes; i++) {
 				pPerturbations[j*m_numNodes + i] = pRperturbations[j*m_numNodes + m_pRorder[i] - 1];

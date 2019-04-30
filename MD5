@@ -1,4 +1,4 @@
-b58276404a2d6e71c995e300fb9b66c5 *DESCRIPTION
+3f2caa8e6b093ee615396e8da797313b *DESCRIPTION
 5d5878bd9c5fa142f93f5861922490a4 *NAMESPACE
 a49ce18a144315503c2f888d1e51950f *R/bif.R
 c7c9f43c14f4754d9b68b9256b22e7b1 *R/categor.R
@@ -21,7 +21,7 @@ dd5e64ee779ee118c23878634efc3204 *R/marginal.prob.R
 3b8e4e631826ee25e2171315854cb79b *R/predict.R
 07d4ba1b6444b77d046911dbc89a29b9 *R/probs.R
 e52a93c9338226c3688cb0f1c54947b0 *R/quant.R
-b819cb1039eb3a25000d70069e6c9e13 *R/samples.R
+c8c1d5bef2bfcaec12fdd306538576fb *R/samples.R
 ccfec956103b45b7b90eb7491631e86c *R/search.R
 7bdb26fefaedb4f649b5a69ddd5f04f2 *R/xdsl.R
 63f1c98369451964ed3ff5f7574ef6ff *R/zzz.R
@@ -77,9 +77,9 @@ a6c2862414466ab32bcc2a4c1492903f *man/tyroid.Rd
 477282fe6912e354a25e2289c621a312 *src/cache.cpp
 c9c97e64906c8f4f2b0c7ac4af8dc9f6 *src/cache.h
 f436b603c12e699afc69aeb5d5fdfb5f *src/catnet_base.h
-0fbc3db7276d66f9ed88b9d058722b5d *src/catnet_entropy.cpp
+769753ad24b068348e75151397df9ff7 *src/catnet_entropy.cpp
 41fd2a36394b23ce1808b0bc0bfb6dcb *src/catnet_quant.cpp
-8055e861c9a2708f41e30b943662755d *src/catnet_rexport.cpp
+d0abb13e8aee64ca88a5c49331a52781 *src/catnet_rexport.cpp
 4b9e24706973039de296c8f7a7355e0f *src/catnet_rexport.h
 ca9a25b6401d55e8ca0483cc98f2cf9b *src/catnet_search.h
 ee5c8cf9d0bd4f96c25144764246740f *src/catnetd.h
@@ -90,14 +90,14 @@ e0662eefbdc9f299f4396448e1ee11d6 *src/ccnInit.c
 88f2408c72d570c19ba73fa1f28d9cdb *src/dag_search_dc.h
 c2c7aeae6eacd3d7233dc0561eedadbf *src/problist.h
 8255d5e7d87e44059227f50f9ed59911 *src/pthread.cpp
-f98c264e91a3c700162359479706a0d6 *src/rcatnet.cpp
+f25bc91bfdb7c80968c00b48ce55a161 *src/rcatnet.cpp
 2fe18b6b5f934dc69de668470cd341f0 *src/rcatnet.h
-8ca16d68eefd9e0d6b54bb228e977df1 *src/rcatnet_hist.cpp
+495bf5d6f18d6ba83aa7506dbbff73a5 *src/rcatnet_hist.cpp
 e53e6ee8fe3176d7f096d6ff64026ec9 *src/rcatnet_hist.h
 fce0ec661c8cfff048ab3bfe7b7be410 *src/rcatnet_prob.cpp
-0c98bc671db0e1e72e064e4c1d4e3753 *src/rcatnet_sa.cpp
+82836c7461cb608efc302035e5cfa9bb *src/rcatnet_sa.cpp
 9b6b7116c18b4fd066611def87a594c4 *src/rcatnet_sa.h
-89da9426e7ac14a689fdceeae5c79c2f *src/rcatnet_search.cpp
+332f22eb54113679f8b513e182dc4efe *src/rcatnet_search.cpp
 82e3b12ddf71056ee94c13161e0a52cd *src/rcatnet_search.h
 0cfc2de832f5947fed2a505dfd658f38 *src/search_params.h
 df744462a75e9ea708953ed03f4aefb5 *src/thread.h
